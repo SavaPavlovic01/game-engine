@@ -1,0 +1,23 @@
+{
+    "name":  "frontend",
+    "version":  "1.0.0",
+    "main":  "index.js",
+    "scripts":  {
+                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
+                    "build":  "esbuild src/main.ts --bundle --outfile=dist/bundle.js \u0026\u0026 copy src\\\\index.html dist\\\\index.html",
+                    "start":  "node dist/bundle.js",
+                    "serve":  "copy src\\\\index.html dist\\\\index.html \u0026\u0026 esbuild src/main.ts --bundle --outfile=dist/bundle.js --servedir=dist",
+                    "clean":  "powershell -Command \"Remove-Item -Path \u0027dist\\*\u0027 -Recurse -Force\""
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "description":  "",
+    "devDependencies":  {
+                            "esbuild":  "^0.28.0",
+                            "typescript":  "^6.0.2"
+                        },
+    "type":  "module"
+}
