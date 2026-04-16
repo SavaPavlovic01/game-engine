@@ -1,22 +1,30 @@
-async function start() {
+const backendUrl = 'http://localhost:8080';
+
+interface DataChannelOps {
+    onMessage: ((e: MessageEvent<any>) => any) | null;
+    onOpen: ((e: Event) => any) | null;
+    onError: ((e: RTCErrorEvent) => any) | null;
+    onClose: ((e: Event) => any) | null;
+}
+
+async function openChannel(
+    ops: DataChannelOps,
+    ordered: boolean = false,
+    maxRetransmits: number = 0,
+) {
     const pc = new RTCPeerConnection();
 
     const dc = pc.createDataChannel('data', {
-        ordered: false,
-        maxRetransmits: 0,
+        ordered: ordered,
+        maxRetransmits: maxRetransmits,
     });
 
-    dc.onopen = () => {
-        console.log('DataChannel open');
-        dc.send('hello from client 👋');
-    };
+    dc.onopen = ops.onOpen;
 
-    dc.onmessage = (e) => {
-        console.log('Server:', e.data);
-    };
+    dc.onmessage = ops.onMessage;
 
-    dc.onerror = (e) => console.error('DC error:', e);
-    dc.onclose = () => console.log('DC closed');
+    dc.onerror = ops.onError;
+    dc.onclose = ops.onClose;
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -30,7 +38,7 @@ async function start() {
 
     const localDesc = pc.localDescription!;
 
-    const res = await fetch('http://localhost:8080/offer', {
+    const res = await fetch(`${backendUrl}/offer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -41,21 +49,39 @@ async function start() {
 
     const answer = await res.json();
     await pc.setRemoteDescription(answer);
+    return dc;
 }
 
 var canvas: HTMLCanvasElement;
 var ctx: CanvasRenderingContext2D | null;
-let playerPos: { x: number; y: number } = { x: 0, y: 0 };
-const playerSize = 50;
+
+interface position {
+    x: number;
+    y: number;
+}
+
+let playerPos: position = { x: 0, y: 0 };
+let otherPlayerPos: position = { x: 25, y: 25 };
+
+const playerSize = 25;
 const playerSpeed = 5;
 
-function drawPlayer() {
-    ctx?.clearRect(0, 0, canvas.width, canvas.height);
+function drawPlayer(pos: position, color: string = 'red') {
+    if (!ctx) return;
     const w = canvas.width;
     const h = canvas.height;
-    const canvasX = playerPos.x + w / 2 - playerSize / 2;
-    const canvasY = playerPos.y + h / 2 - playerSize / 2;
-    ctx?.fillRect(canvasX, canvasY, playerSize, playerSize);
+    const canvasX = pos.x + w / 2 - playerSize / 2;
+    const canvasY = pos.y + h / 2 - playerSize / 2;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(canvasX, canvasY, playerSize, playerSize);
+}
+
+function drawPlayers() {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawPlayer(playerPos);
+    drawPlayer(otherPlayerPos, 'blue');
 }
 
 function initCanvas() {
@@ -69,7 +95,7 @@ function initCanvas() {
         return;
     }
     ctx.fillStyle = 'red';
-    drawPlayer();
+    drawPlayers();
 }
 
 window.onload = () => {
@@ -93,7 +119,29 @@ window.onkeydown = (ev: KeyboardEvent) => {
         default:
             break;
     }
-    drawPlayer();
+    drawPlayers();
 };
+
+async function start() {
+    const ops: DataChannelOps = {
+        onMessage: (e) => {
+            const pos: position = JSON.parse(e.data);
+            console.log(`got message ${e.data}`);
+            otherPlayerPos = pos;
+            drawPlayers();
+        },
+
+        onClose: (e) => {
+            console.log('closed');
+        },
+        onError: (e) => {
+            console.log('closed');
+        },
+        onOpen: (e) => {
+            console.log('opened');
+        },
+    };
+    openChannel(ops);
+}
 
 start().catch(console.error);

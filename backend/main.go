@@ -14,7 +14,17 @@ type SessionDescription struct {
 	Type string `json:"type"`
 }
 
+type Connection struct {
+	Id   string
+	peer *webrtc.PeerConnection
+	dc   *webrtc.DataChannel
+}
+
 func main() {
+	allConnections := make(map[string]Connection)
+	var firstPlayer *Connection
+	var secondPlayer *Connection
+
 	http.Handle("/", http.FileServer(http.Dir("./client")))
 
 	http.HandleFunc("/offer", func(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +49,11 @@ func main() {
 
 		peerConnection.OnDataChannel(func(dc *webrtc.DataChannel) {
 			fmt.Println("DataChannel opened:", dc.Label())
+			if firstPlayer == nil {
+				firstPlayer = &Connection{"one", peerConnection, dc}
+			} else {
+				secondPlayer = &Connection{"two", peerConnection, dc}
+			}
 
 			dc.OnOpen(func() {
 				fmt.Println("DC ready, sending greeting")
@@ -81,6 +96,7 @@ func main() {
 			SDP:  peerConnection.LocalDescription().SDP,
 			Type: peerConnection.LocalDescription().Type.String(),
 		})
+
 	})
 
 	log.Println("Server running on http://localhost:8080")
