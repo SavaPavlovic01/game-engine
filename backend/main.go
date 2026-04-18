@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cs/channel"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -21,15 +22,13 @@ type Connection struct {
 }
 
 func main() {
-	allConnections := make(map[string]Connection)
-	var firstPlayer *Connection
-	var secondPlayer *Connection
 
 	http.Handle("/", http.FileServer(http.Dir("./client")))
 
 	http.HandleFunc("/offer", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -48,24 +47,16 @@ func main() {
 		}
 
 		peerConnection.OnDataChannel(func(dc *webrtc.DataChannel) {
-			fmt.Println("DataChannel opened:", dc.Label())
-			if firstPlayer == nil {
-				firstPlayer = &Connection{"one", peerConnection, dc}
-			} else {
-				secondPlayer = &Connection{"two", peerConnection, dc}
+			fmt.Println("Channel opened:", dc.Label())
+			channel, err := channel.MakeChannel(dc, dc.Label())
+			if err != nil {
+				fmt.Println(err)
 			}
 
-			dc.OnOpen(func() {
-				fmt.Println("DC ready, sending greeting")
-				if err := dc.SendText("hello from server 👋"); err != nil {
-					log.Println("Send error:", err)
-				}
-			})
-
-			dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-				fmt.Printf("Client says: %s\n", string(msg.Data))
-				dc.SendText("echo: " + string(msg.Data))
-			})
+			dc.OnOpen(channel.OnOpen)
+			dc.OnMessage(channel.OnMessage)
+			dc.OnError(channel.OnError)
+			dc.OnClose(channel.OnClose)
 		})
 
 		if err = peerConnection.SetRemoteDescription(webrtc.SessionDescription{

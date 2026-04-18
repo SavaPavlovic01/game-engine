@@ -7,14 +7,20 @@ interface DataChannelOps {
     onClose: ((e: Event) => any) | null;
 }
 
+interface LobbyInfo {
+    id: string;
+    playerCnt: number;
+}
+
 async function openChannel(
+    label: string,
     ops: DataChannelOps,
     ordered: boolean = false,
     maxRetransmits: number = 0,
 ) {
     const pc = new RTCPeerConnection();
 
-    const dc = pc.createDataChannel('data', {
+    const dc = pc.createDataChannel(label, {
         ordered: ordered,
         maxRetransmits: maxRetransmits,
     });
@@ -141,7 +147,23 @@ async function start() {
             console.log('opened');
         },
     };
-    openChannel(ops);
+
+    const lobbyChannelOps: DataChannelOps = {
+        onMessage: (e) => {
+            const lobbyInfo: LobbyInfo = JSON.parse(e.data);
+            console.log(`got into lobby, info: ${lobbyInfo} `);
+        },
+        onClose: null,
+        onError: null,
+        onOpen: (e) => {
+            console.log('opened lobby channel');
+            const channel = e.target as RTCDataChannel;
+            channel.send('i want to join');
+        },
+    };
+
+    openChannel('data', ops);
+    openChannel('lobby', lobbyChannelOps, true, 5);
 }
 
 start().catch(console.error);
