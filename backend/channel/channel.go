@@ -23,7 +23,7 @@ type LobbyChannel struct {
 }
 
 func (lc LobbyChannel) OnMessage(msg webrtc.DataChannelMessage) {
-	lc.dc.SendText("idk what you want from me")
+	lc.dc.SendText("idk")
 }
 
 func (lc LobbyChannel) OnOpen() {
