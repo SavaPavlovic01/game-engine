@@ -2,6 +2,7 @@ package main
 
 import (
 	"cs/channel"
+	globalcontext "cs/globalContext"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +23,8 @@ type Connection struct {
 }
 
 func main() {
+
+	globalcontext.Ctx = globalcontext.MakeGlobalCtx()
 
 	http.Handle("/", http.FileServer(http.Dir("./client")))
 

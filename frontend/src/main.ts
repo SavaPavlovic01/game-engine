@@ -1,61 +1,8 @@
-const backendUrl = 'http://localhost:8080';
-
-interface DataChannelOps {
-    onMessage: ((e: MessageEvent<any>) => any) | null;
-    onOpen: ((e: Event) => any) | null;
-    onError: ((e: RTCErrorEvent) => any) | null;
-    onClose: ((e: Event) => any) | null;
-}
+import { Game } from './game.js';
 
 interface LobbyInfo {
     id: string;
     playerCnt: number;
-}
-
-async function openChannel(
-    label: string,
-    ops: DataChannelOps,
-    ordered: boolean = false,
-    maxRetransmits: number = 0,
-) {
-    const pc = new RTCPeerConnection();
-
-    const dc = pc.createDataChannel(label, {
-        ordered: ordered,
-        maxRetransmits: maxRetransmits,
-    });
-
-    dc.onopen = ops.onOpen;
-
-    dc.onmessage = ops.onMessage;
-
-    dc.onerror = ops.onError;
-    dc.onclose = ops.onClose;
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    await new Promise<void>((resolve) => {
-        if (pc.iceGatheringState === 'complete') return resolve();
-        pc.onicegatheringstatechange = () => {
-            if (pc.iceGatheringState === 'complete') resolve();
-        };
-    });
-
-    const localDesc = pc.localDescription!;
-
-    const res = await fetch(`${backendUrl}/offer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            sdp: localDesc.sdp,
-            type: localDesc.type,
-        }),
-    });
-
-    const answer = await res.json();
-    await pc.setRemoteDescription(answer);
-    return dc;
 }
 
 var canvas: HTMLCanvasElement;
@@ -107,6 +54,8 @@ function initCanvas() {
 window.onload = () => {
     canvas = document.getElementById('canvas') as HTMLCanvasElement;
     initCanvas();
+    const button = document.getElementById('makeLobbyButton') as HTMLButtonElement;
+    button.onclick = () => game.makeLobby();
 };
 
 window.onkeydown = (ev: KeyboardEvent) => {
@@ -128,42 +77,5 @@ window.onkeydown = (ev: KeyboardEvent) => {
     drawPlayers();
 };
 
-async function start() {
-    const ops: DataChannelOps = {
-        onMessage: (e) => {
-            const pos: position = JSON.parse(e.data);
-            console.log(`got message ${e.data}`);
-            otherPlayerPos = pos;
-            drawPlayers();
-        },
-
-        onClose: (e) => {
-            console.log('closed');
-        },
-        onError: (e) => {
-            console.log('closed');
-        },
-        onOpen: (e) => {
-            console.log('opened');
-        },
-    };
-
-    const lobbyChannelOps: DataChannelOps = {
-        onMessage: (e) => {
-            const lobbyInfo: LobbyInfo = JSON.parse(e.data);
-            console.log(`got into lobby, info: ${lobbyInfo} `);
-        },
-        onClose: null,
-        onError: null,
-        onOpen: (e) => {
-            console.log('opened lobby channel');
-            const channel = e.target as RTCDataChannel;
-            channel.send('i want to join');
-        },
-    };
-
-    openChannel('data', ops);
-    openChannel('lobby', lobbyChannelOps, true, 5);
-}
-
-start().catch(console.error);
+const game = new Game();
+await game.initChannels();

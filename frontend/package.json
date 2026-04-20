@@ -4,9 +4,9 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "esbuild src/main.ts --bundle --outfile=dist/bundle.js && copy src\\\\index.html dist\\\\index.html",
+        "build": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --format=esm && copy src\\\\index.html dist\\\\index.html",
         "start": "node dist/bundle.js",
-        "serve": "copy src\\\\index.html dist\\\\index.html && esbuild src/main.ts --bundle --outfile=dist/bundle.js --servedir=dist",
+        "serve": "copy src\\\\index.html dist\\\\index.html && esbuild src/main.ts --bundle --outfile=dist/bundle.js --format=esm --servedir=dist",
         "clean": "powershell -Command \"Remove-Item -Path 'dist\\*' -Recurse -Force\""
     },
     "keywords": [],
