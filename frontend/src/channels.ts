@@ -7,6 +7,7 @@ export interface ChannelOps {
 
 export enum LobbyOps {
     makeLobby,
+    playerConnected,
 }
 
 export interface LobbyChannelMsg {

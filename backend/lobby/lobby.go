@@ -32,3 +32,20 @@ func (l *Lobby) AddPlayer(player *Player) error {
 
 	return nil
 }
+
+func (l *Lobby) Broadcast(msg string) error {
+	l.mu.RLock()
+
+	l.mu.RLock()
+	players := make([]*Player, 0, len(l.Players))
+	for _, p := range l.Players {
+		players = append(players, p)
+	}
+	l.mu.RUnlock()
+
+	for _, player := range players {
+		player.LobbyChannel.SendText(msg)
+	}
+
+	return nil
+}
