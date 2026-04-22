@@ -56,6 +56,9 @@ window.onload = () => {
     initCanvas();
     const button = document.getElementById('makeLobbyButton') as HTMLButtonElement;
     button.onclick = () => game.makeLobby();
+
+    const joinButton = document.getElementById('joinLobby') as HTMLButtonElement;
+    joinButton.onclick = () => game.joinLobby();
 };
 
 window.onkeydown = (ev: KeyboardEvent) => {

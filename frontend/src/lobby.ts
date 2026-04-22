@@ -12,7 +12,7 @@ export class Lobby {
     }
 
     // just send message to backend to make a new lobby
-    static makeLobby(plaerId: string, lobbyChannel: RTCDataChannel) {
+    static makeLobbyRequest(plaerId: string, lobbyChannel: RTCDataChannel) {
         const data: LobbyChannelMsg = {
             operation: LobbyOps.makeLobby,
             values: { playerId: plaerId },
@@ -20,5 +20,15 @@ export class Lobby {
 
         lobbyChannel.send(JSON.stringify(data));
         console.log('sent lobby request');
+    }
+
+    static joinLobbyRequest(playerId: string, lobbyId: string, lobbyChannel: RTCDataChannel) {
+        const data: LobbyChannelMsg = {
+            operation: LobbyOps.joinLobby,
+            values: { playerId: playerId, lobbyId: lobbyId },
+        };
+
+        lobbyChannel.send(JSON.stringify(data));
+        console.log('send lobby join request');
     }
 }

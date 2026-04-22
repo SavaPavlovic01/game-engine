@@ -4,6 +4,7 @@ import (
 	globalcontext "cs/globalContext"
 	"cs/lobby"
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
@@ -14,11 +15,18 @@ type LobbyChannel struct {
 }
 
 type LobbyOp uint32
+type RequestState uint32
+
+const (
+	OK RequestState = iota
+)
 
 const (
 	lobbyCreated LobbyOp = iota
 	playerConnected
 	joinLobby
+	broadcast
+	playerJoinedLobbyBroadcast
 )
 
 type LobbyMessageOut struct {
@@ -27,11 +35,26 @@ type LobbyMessageOut struct {
 }
 
 type LobbyMessageIn struct {
-	Operation LobbyOp `json:"operation"`
-	Values    []byte  `json:"values"`
+	Operation LobbyOp         `json:"operation"`
+	Values    json.RawMessage `json:"values"`
+}
+
+type LobbyRequestResponse struct {
+	Operation LobbyOp      `json:"operation"`
+	Status    RequestState `json:"status"`
+	Values    any          `json:"values"`
+}
+
+func sendOpOkResponse(op LobbyOp, body any, dc *webrtc.DataChannel) {
+	resp := LobbyRequestResponse{Operation: op, Status: OK, Values: body}
+
+	data, _ := json.Marshal(resp)
+
+	dc.SendText(string(data))
 }
 
 func (lc LobbyChannel) handleCreateLobby(msg LobbyMessageIn) error {
+	fmt.Println("got a make lobby request")
 	type msgValue struct {
 		PlayerId string `json:"playerId"`
 	}
@@ -44,10 +67,19 @@ func (lc LobbyChannel) handleCreateLobby(msg LobbyMessageIn) error {
 	if err != nil {
 		return err
 	}
-	err = globalcontext.Ctx.AddLobbyWithPlayer(player)
+	fmt.Println("got player " + player.Id)
+	id, err := globalcontext.Ctx.AddLobbyWithPlayer(player)
+	fmt.Println("made a lobby " + id)
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("sending ok")
+
+	sendOpOkResponse(msg.Operation, struct {
+		LobbyId string `json:"lobbyId"`
+	}{LobbyId: id}, lc.dc)
+
 	return nil
 }
 
@@ -76,6 +108,20 @@ func (lc LobbyChannel) handleJoinLobby(msg LobbyMessageIn) error {
 	if err != nil {
 		return err
 	}
+
+	data, err := json.Marshal(LobbyRequestResponse{Operation: playerJoinedLobbyBroadcast, Status: OK, Values: struct {
+		PlayerCnt int32 `json:"playerCnt"`
+	}{int32(lobby.PlayerCnt)}})
+
+	err = lobby.Broadcast(string(data), player.Id)
+	if err != nil {
+		return err
+	}
+
+	sendOpOkResponse(msg.Operation, struct {
+		LobbyId   string `json:"lobbyId"`
+		PlayerCnt int32  `json:"playerCnt"`
+	}{LobbyId: lobby.Id, PlayerCnt: int32(lobby.PlayerCnt)}, lc.dc)
 	return nil
 }
 
@@ -86,32 +132,37 @@ func (lc LobbyChannel) handleBroadcast(msg LobbyMessageIn) error {
 		Message  string `json:"message"`
 	}
 
-	var value msgValue
-	err := json.Unmarshal(msg.Values, &value)
+	var values msgValue
+	err := json.Unmarshal(msg.Values, &values)
 	if err != nil {
 		return err
 	}
 
-	lobby, err := globalcontext.Ctx.GetLobby(value.LobbyId)
+	lobby, err := globalcontext.Ctx.GetLobby(values.LobbyId)
 	if err != nil {
 		return err
 	}
+	sendOpOkResponse(msg.Operation, struct{}{}, lc.dc)
 
-	return lobby.Broadcast(value.Message)
+	return lobby.Broadcast(values.Message, values.PlayerId)
 }
 
 func (lc LobbyChannel) handleMessage(msg LobbyMessageIn) {
 	handleError := func(err error) {
 		if err != nil {
-			lc.dc.SendText("failed to create lobby, error:" + err.Error())
+			lc.dc.SendText("failed to perform operation, error:" + err.Error())
 		}
 	}
-
+	fmt.Println("im here dumbass")
 	switch msg.Operation {
 	case lobbyCreated:
 		handleError(lc.handleCreateLobby(msg))
 	case joinLobby:
 		handleError(lc.handleJoinLobby(msg))
+	case broadcast:
+		handleError(lc.handleBroadcast(msg))
+	default:
+		fmt.Println("i dont recognize that ")
 	}
 }
 
@@ -128,7 +179,7 @@ func (lc LobbyChannel) OnMessage(msg webrtc.DataChannelMessage) {
 func (lc LobbyChannel) OnOpen() {
 	id := uuid.NewString()
 
-	data, err := json.Marshal(LobbyMessageOut{Operation: playerConnected, Values: struct {
+	data, err := json.Marshal(LobbyRequestResponse{Operation: playerConnected, Status: OK, Values: struct {
 		PlayerId string `json:"playerId"`
 	}{PlayerId: id}})
 
@@ -136,6 +187,7 @@ func (lc LobbyChannel) OnOpen() {
 		lc.dc.SendText("failed")
 	}
 
+	fmt.Println("send player id")
 	_ = lc.dc.SendText(string(data))
 	player := lobby.MakePlayer(id, lc.dc)
 	globalcontext.Ctx.AddPlayer(player)

@@ -16,7 +16,7 @@ type Lobby struct {
 }
 
 func MakeLobby() *Lobby {
-	return &Lobby{Id: uuid.NewString(), PlayerCnt: 0}
+	return &Lobby{Id: uuid.NewString(), PlayerCnt: 0, Players: make(map[string]*Player)}
 }
 
 func (l *Lobby) AddPlayer(player *Player) error {
@@ -33,7 +33,7 @@ func (l *Lobby) AddPlayer(player *Player) error {
 	return nil
 }
 
-func (l *Lobby) Broadcast(msg string) error {
+func (l *Lobby) Broadcast(msg string, skipId string) error {
 	l.mu.RLock()
 
 	l.mu.RLock()
@@ -44,7 +44,9 @@ func (l *Lobby) Broadcast(msg string) error {
 	l.mu.RUnlock()
 
 	for _, player := range players {
-		player.LobbyChannel.SendText(msg)
+		if player.Id != skipId {
+			player.LobbyChannel.SendText(msg)
+		}
 	}
 
 	return nil

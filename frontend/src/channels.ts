@@ -8,9 +8,18 @@ export interface ChannelOps {
 export enum LobbyOps {
     makeLobby,
     playerConnected,
+    joinLobby,
+    broadcast,
+    otherPlayerJoined,
 }
 
 export interface LobbyChannelMsg {
     operation: LobbyOps;
+    values: any;
+}
+
+export interface LobbyRequestResponse {
+    operation: LobbyOps;
+    status: number;
     values: any;
 }

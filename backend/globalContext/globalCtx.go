@@ -26,6 +26,7 @@ func (gc *GlobalCtx) AddPlayer(player *lobby.Player) error {
 	if _, contains := gc.Players[player.Id]; contains {
 		return fmt.Errorf("failed to add player, player with id %s already exists", player.Id)
 	}
+	gc.Players[player.Id] = player
 
 	return nil
 }
@@ -50,11 +51,11 @@ func (gc *GlobalCtx) GetLobby(Id string) (*lobby.Lobby, error) {
 	return lobby, nil
 }
 
-func (gc *GlobalCtx) AddLobbyWithPlayer(player *lobby.Player) error {
+func (gc *GlobalCtx) AddLobbyWithPlayer(player *lobby.Player) (string, error) {
 	player.Mu.Lock()
 	if player.InLobby {
 		player.Mu.Unlock()
-		return fmt.Errorf("player is already in lobby")
+		return "", fmt.Errorf("player is already in lobby")
 	}
 
 	player.InLobby = true
@@ -66,5 +67,5 @@ func (gc *GlobalCtx) AddLobbyWithPlayer(player *lobby.Player) error {
 	gc.lobbyMu.Lock()
 	gc.Lobbies[lobby.Id] = lobby
 	gc.lobbyMu.Unlock()
-	return nil
+	return lobby.Id, nil
 }
