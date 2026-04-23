@@ -6,7 +6,7 @@ export abstract class Model {
     private rotation: Vec3;
     private scale: Vec3;
 
-    protected verticies: Vec3[];
+    protected verticies: Float32Array;
     protected indexBuffer: Uint16Array;
 
     private modelMatrix: Mat4;
@@ -15,7 +15,7 @@ export abstract class Model {
         translate: Vec3,
         rotate: Vec3,
         scale: Vec3,
-        verticies: Vec3[],
+        verticies: Float32Array,
         indexBuffer: Uint16Array,
     ) {
         this.translation = translate;
@@ -33,17 +33,17 @@ export abstract class Model {
     }
 
     public translate(dir: Vec3) {
-        this.translation.add(dir);
+        this.translation = this.translation.add(dir);
         this.modelMatrix = this.buildModelMatrix();
     }
 
     public rotate(dir: Vec3) {
-        this.rotation.add(dir);
+        this.rotation = this.rotation.add(dir);
         this.modelMatrix = this.buildModelMatrix();
     }
 
     public changeScale(sc: Vec3) {
-        this.scale.add(sc);
+        this.scale = this.scale.add(sc);
         this.modelMatrix = this.buildModelMatrix();
     }
 
