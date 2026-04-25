@@ -46,7 +46,7 @@ export class Mat4 {
     }
 
     public static translationMatrix(trans: Vec3): Mat4 {
-        return new Mat4([1, 0, 0, trans.x(), 0, 1, 0, trans.y(), 0, 0, 1, trans.z(), 0, 0, 0, 0]);
+        return new Mat4([1, 0, 0, trans.x(), 0, 1, 0, trans.y(), 0, 0, 1, trans.z(), 0, 0, 0, 1]);
     }
 
     static rotationMatrix(rot: Vec3): Mat4 {
@@ -119,9 +119,6 @@ export class Mat4 {
 
     static perspective(fov: number, aspect: number, near: number, far: number): Mat4 {
         const f = 1.0 / Math.tan(fov / 2);
-
-        const nf = 1 / (near - far);
-
         return new Mat4(
             new Float32Array([
                 f / aspect,
@@ -134,8 +131,8 @@ export class Mat4 {
                 0,
                 0,
                 0,
-                far * nf,
-                far * near * nf,
+                far / (near - far),
+                (near * far) / (near - far),
                 0,
                 0,
                 -1,

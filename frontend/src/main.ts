@@ -1,4 +1,8 @@
 import { Game } from './game.js';
+import { Graphics } from './graphics/graphics.js';
+import { Vec3 } from './graphics/math/vec.js';
+import { Cube } from './graphics/objects/cube.js';
+import { Scene } from './graphics/scene.js';
 
 interface LobbyInfo {
     id: string;
@@ -51,33 +55,53 @@ function initCanvas() {
     drawPlayers();
 }
 
-window.onload = () => {
+var graphics: Graphics;
+var scene: Scene;
+const cube = new Cube(new Vec3(0, 0, -5));
+const cube1 = new Cube(new Vec3(2, 0, -10));
+
+setInterval(() => {
+    cube.rotate(new Vec3(0.1, 0.1, 0.1));
+}, 50);
+
+window.onload = async () => {
     canvas = document.getElementById('canvas') as HTMLCanvasElement;
-    initCanvas();
     const button = document.getElementById('makeLobbyButton') as HTMLButtonElement;
     button.onclick = () => game.makeLobby();
 
     const joinButton = document.getElementById('joinLobby') as HTMLButtonElement;
     joinButton.onclick = () => game.joinLobby();
+
+    graphics = await Graphics.create(canvas);
+    scene = new Scene();
+
+    scene.addObject(cube);
+    scene.addObject(cube1);
+
+    function frame() {
+        scene.renderScene(graphics.driver);
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
 };
 
 window.onkeydown = (ev: KeyboardEvent) => {
+    console.log('hellos');
     switch (ev.key) {
         case 'w':
-            playerPos.y -= playerSpeed;
+            scene.camera.translate(new Vec3(0, 0, -1));
             break;
         case 'a':
-            playerPos.x -= playerSpeed;
+            scene.camera.translate(new Vec3(-1, 0, 0));
             break;
         case 's':
-            playerPos.y += playerSpeed;
+            scene.camera.translate(new Vec3(0, 0, 1));
             break;
         case 'd':
-            playerPos.x += playerSpeed;
+            scene.camera.translate(new Vec3(1, 0, 0));
         default:
             break;
     }
-    drawPlayers();
 };
 
 const game = new Game();

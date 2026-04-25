@@ -42,7 +42,11 @@ export class Cube extends Model {
         20, 21, 22, 20, 22, 23,
     ]);
 
-    constructor(translate: Vec3, rotate: Vec3, scale: Vec3) {
+    constructor(
+        translate: Vec3 = new Vec3(0, 0, 0),
+        rotate: Vec3 = new Vec3(0, 0, 0),
+        scale: Vec3 = new Vec3(1, 1, 1),
+    ) {
         super(translate, rotate, scale, Cube.cubeVertices, Cube.indices);
     }
 }

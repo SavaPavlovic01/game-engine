@@ -1,7 +1,8 @@
 export class WebGPUDriver {
     public device: GPUDevice;
-    private format: GPUTextureFormat;
+    public format: GPUTextureFormat;
     private sampler: GPUSampler;
+    public ctx!: GPUCanvasContext;
 
     constructor(device: GPUDevice, canvasFormat: GPUTextureFormat) {
         this.device = device;
@@ -25,5 +26,12 @@ export class WebGPUDriver {
 
         this.device.queue.writeBuffer(buffer, 0, data);
         return buffer;
+    }
+
+    public makeBuffer(size: number, usage: number) {
+        return this.device.createBuffer({
+            size: size,
+            usage: usage,
+        });
     }
 }

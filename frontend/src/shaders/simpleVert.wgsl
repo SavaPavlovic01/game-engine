@@ -15,7 +15,7 @@ struct VertexOutput {
 };
 
 @vertex
-fn main(input: VertexInput) -> VertexOutput {
+fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
     let worldPos = vec4<f32>(input.position, 1.0);
