@@ -58,10 +58,10 @@ function initCanvas() {
 var graphics: Graphics;
 var scene: Scene;
 const cube = new Cube(new Vec3(0, 0, -5));
-const cube1 = new Cube(new Vec3(2, 0, -10));
+const cube1 = new Cube(new Vec3(2, 0, -10), new Vec3(1, 1, 1), new Vec3(2, 2, 5));
 
 setInterval(() => {
-    cube.rotate(new Vec3(0.1, 0.1, 0.1));
+    scene.rotateObject(graphics.driver, 0);
 }, 50);
 
 window.onload = async () => {
@@ -74,9 +74,10 @@ window.onload = async () => {
 
     graphics = await Graphics.create(canvas);
     scene = new Scene();
+    scene.init(graphics.driver, canvas.width, canvas.height);
 
-    scene.addObject(cube);
-    scene.addObject(cube1);
+    scene.addObject(graphics.driver, cube);
+    scene.addObject(graphics.driver, cube1);
 
     function frame() {
         scene.renderScene(graphics.driver);

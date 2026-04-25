@@ -1,8 +1,9 @@
 import { simpleFrag, simpleVert } from '../generated/shaders';
 import { Camera } from './camera';
+import { InstanceBuffer } from './InstanceBuffer';
 import { Vec3 } from './math/vec';
 import type { Model } from './model';
-import type { WebGPUDriver } from './webGpuDriver';
+import { WebGPUDriver } from './webGpuDriver';
 
 export class Scene {
     public camera: Camera;
@@ -13,6 +14,11 @@ export class Scene {
     private pipeline!: GPURenderPipeline;
     private depthTexture!: GPUTexture;
 
+    private cubeInstanceBuffer!: InstanceBuffer;
+
+    private vpBuffer!: GPUBuffer;
+    private vpBindGroup!: GPUBindGroup;
+
     constructor() {
         const pos = new Vec3(0, 0, 0);
         const rot = new Vec3(0, 0, 0);
@@ -20,9 +26,12 @@ export class Scene {
         this.models = [];
     }
 
-    private init(driver: WebGPUDriver, w: number, h: number) {
+    public init(driver: WebGPUDriver, w: number, h: number) {
+        this.inited = true;
         const format = driver.format;
         const shaderCode = simpleVert + '\n' + simpleFrag;
+
+        this.cubeInstanceBuffer = new InstanceBuffer(driver.device, 10000);
 
         const shaderModule = driver.device.createShaderModule({
             code: shaderCode,
@@ -42,6 +51,32 @@ export class Scene {
                                 shaderLocation: 0,
                                 offset: 0,
                                 format: 'float32x3',
+                            },
+                        ],
+                    },
+                    {
+                        arrayStride: 64,
+                        stepMode: 'instance',
+                        attributes: [
+                            {
+                                shaderLocation: 1,
+                                offset: 0,
+                                format: 'float32x4',
+                            },
+                            {
+                                shaderLocation: 2,
+                                offset: 16,
+                                format: 'float32x4',
+                            },
+                            {
+                                shaderLocation: 3,
+                                offset: 32,
+                                format: 'float32x4',
+                            },
+                            {
+                                shaderLocation: 4,
+                                offset: 48,
+                                format: 'float32x4',
                             },
                         ],
                     },
@@ -76,6 +111,12 @@ export class Scene {
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
+        this.vpBuffer = driver.makeBuffer(64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+        this.vpBindGroup = driver.device.createBindGroup({
+            layout: this.pipeline.getBindGroupLayout(0),
+            entries: [{ binding: 0, resource: { buffer: this.vpBuffer } }],
+        });
+
         console.log('projection ', this.camera.getProjection().toColumnMajor());
         console.log('view matrix', this.camera.getView().toColumnMajor());
     }
@@ -85,6 +126,9 @@ export class Scene {
             this.init(driver, driver.ctx.canvas.width, driver.ctx.canvas.height);
             this.inited = true;
         }
+
+        const vp = this.camera.getProjection().matmul(this.camera.getView());
+        driver.device.queue.writeBuffer(this.vpBuffer, 0, vp.toColumnMajor());
 
         const currentTexture = driver.ctx.getCurrentTexture();
         const colorView = currentTexture.createView();
@@ -110,29 +154,36 @@ export class Scene {
 
         pass.setPipeline(this.pipeline);
 
-        for (const model of this.models) {
-            const mvp = this.camera
-                .getProjection()
-                .matmul(this.camera.getView())
-                .matmul(model.getModelMatrix());
+        //console.log(model.getModelMatrix());
 
-            //console.log(model.getModelMatrix());
-            driver.device.queue.writeBuffer(model.getUniform(driver), 0, mvp.toColumnMajor());
+        pass.setBindGroup(0, this.vpBindGroup);
 
-            pass.setBindGroup(0, model.getBindGroup(driver, this.pipeline));
+        pass.setVertexBuffer(0, this.models[0]!.getVertexBuffer(driver));
+        pass.setVertexBuffer(1, this.cubeInstanceBuffer.buffer);
+        pass.setIndexBuffer(this.models[0]!.getIndexbuffer(driver), 'uint16');
 
-            pass.setVertexBuffer(0, model.getVertexBuffer(driver));
-            pass.setIndexBuffer(model.getIndexbuffer(driver), 'uint16');
-
-            pass.drawIndexed(model.indecies.length);
-        }
+        // works for now, since i dont remove objects
+        pass.drawIndexed(36, this.models.length);
 
         pass.end();
         driver.device.queue.submit([encoder.finish()]);
     }
 
-    public addObject(model: Model) {
+    public addObject(driver: WebGPUDriver, model: Model) {
         this.models.push(model);
+        model.slot = this.cubeInstanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
         console.log(this.models.length);
+    }
+
+    // works for now, since i dont remove objects
+    public rotateObject(
+        driver: WebGPUDriver,
+        modelSlot: number,
+        rot: Vec3 = new Vec3(0.1, 0.1, 0.1),
+    ) {
+        if (this.models.length <= modelSlot) return;
+        const model = this.models[modelSlot]!;
+        model.rotate(rot);
+        this.cubeInstanceBuffer.update(driver, modelSlot, model.getModelMatrix().toColumnMajor());
     }
 }

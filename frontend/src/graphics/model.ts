@@ -19,6 +19,8 @@ export abstract class Model {
     private uniformBuffer?: GPUBuffer;
     private bindGroup?: GPUBindGroup;
 
+    public slot?: number;
+
     constructor(
         translate: Vec3,
         rotate: Vec3,
