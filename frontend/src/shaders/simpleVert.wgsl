@@ -11,6 +11,7 @@ struct VertexInput {
     @location(2) mvp1: vec4<f32>,
     @location(3) mvp2: vec4<f32>,
     @location(4) mvp3: vec4<f32>,
+
 };
 
 struct VertexOutput {

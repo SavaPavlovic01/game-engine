@@ -34,4 +34,20 @@ export class WebGPUDriver {
             usage: usage,
         });
     }
+    public async readBuffer(buffer: GPUBuffer, size: number): Promise<ArrayBuffer> {
+        const debugBuffer = this.device.createBuffer({
+            size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+
+        const encoder = this.device.createCommandEncoder();
+        encoder.copyBufferToBuffer(buffer, 0, debugBuffer, 0, size);
+        this.device.queue.submit([encoder.finish()]);
+
+        await debugBuffer.mapAsync(GPUMapMode.READ);
+        const result = debugBuffer.getMappedRange().slice(0);
+        debugBuffer.unmap();
+        debugBuffer.destroy();
+        return result;
+    }
 }

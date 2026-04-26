@@ -1,4 +1,4 @@
-import { simpleFrag, simpleVert } from '../generated/shaders';
+import { compact, simpleFrag, simpleVert } from '../generated/shaders';
 import { Camera } from './camera';
 import { InstanceBuffer } from './InstanceBuffer';
 import { Vec3 } from './math/vec';
@@ -117,23 +117,68 @@ export class Scene {
             entries: [{ binding: 0, resource: { buffer: this.vpBuffer } }],
         });
 
-        console.log('projection ', this.camera.getProjection().toColumnMajor());
-        console.log('view matrix', this.camera.getView().toColumnMajor());
+        this.initCompactPipeline(driver);
     }
 
-    public renderScene(driver: WebGPUDriver) {
+    private cleanBuffer!: GPUBuffer;
+    private drawArgsBuffer!: GPUBuffer;
+    private compactPipeline!: GPUComputePipeline;
+    private compactBindGroup!: GPUBindGroup;
+
+    private initCompactPipeline(driver: WebGPUDriver) {
+        this.cleanBuffer = driver.device.createBuffer({
+            size: 64 * this.cubeInstanceBuffer.capacity,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
+        });
+
+        this.drawArgsBuffer = driver.device.createBuffer({
+            size: 5 * 4,
+            usage:
+                GPUBufferUsage.INDIRECT |
+                GPUBufferUsage.STORAGE |
+                GPUBufferUsage.COPY_DST |
+                GPUBufferUsage.COPY_SRC,
+        });
+
+        const compactShader = driver.device.createShaderModule({ code: compact });
+        this.compactPipeline = driver.device.createComputePipeline({
+            layout: 'auto',
+            compute: {
+                module: compactShader,
+                entryPoint: 'main',
+            },
+        });
+
+        this.compactBindGroup = driver.device.createBindGroup({
+            layout: this.compactPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.cubeInstanceBuffer.buffer } },
+                { binding: 1, resource: { buffer: this.cleanBuffer } },
+                { binding: 2, resource: { buffer: this.drawArgsBuffer } },
+            ],
+        });
+    }
+
+    public async renderScene(driver: WebGPUDriver) {
         if (!this.inited) {
             this.init(driver, driver.ctx.canvas.width, driver.ctx.canvas.height);
             this.inited = true;
         }
+
+        driver.device.queue.writeBuffer(this.drawArgsBuffer, 0, new Uint32Array([36, 0, 0, 0, 0]));
+        const encoder = driver.device.createCommandEncoder();
+
+        const computePass = encoder.beginComputePass();
+        computePass.setPipeline(this.compactPipeline);
+        computePass.setBindGroup(0, this.compactBindGroup);
+        computePass.dispatchWorkgroups(Math.ceil(this.cubeInstanceBuffer.capacity / 64));
+        computePass.end();
 
         const vp = this.camera.getProjection().matmul(this.camera.getView());
         driver.device.queue.writeBuffer(this.vpBuffer, 0, vp.toColumnMajor());
 
         const currentTexture = driver.ctx.getCurrentTexture();
         const colorView = currentTexture.createView();
-
-        const encoder = driver.device.createCommandEncoder();
 
         const pass = encoder.beginRenderPass({
             colorAttachments: [
@@ -154,36 +199,40 @@ export class Scene {
 
         pass.setPipeline(this.pipeline);
 
-        //console.log(model.getModelMatrix());
-
         pass.setBindGroup(0, this.vpBindGroup);
 
         pass.setVertexBuffer(0, this.models[0]!.getVertexBuffer(driver));
-        pass.setVertexBuffer(1, this.cubeInstanceBuffer.buffer);
         pass.setIndexBuffer(this.models[0]!.getIndexbuffer(driver), 'uint16');
 
-        // works for now, since i dont remove objects
-        pass.drawIndexed(36, this.models.length);
+        pass.setVertexBuffer(1, this.cleanBuffer);
+
+        pass.drawIndexedIndirect(this.drawArgsBuffer, 0);
 
         pass.end();
         driver.device.queue.submit([encoder.finish()]);
     }
 
     public addObject(driver: WebGPUDriver, model: Model) {
-        this.models.push(model);
         model.slot = this.cubeInstanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
-        console.log(this.models.length);
+        this.models[model.slot] = model;
+        console.log('adding object');
+        console.log('slot ', model.slot);
     }
 
-    // works for now, since i dont remove objects
+    public removeObject(driver: WebGPUDriver, slot: number) {
+        this.cubeInstanceBuffer.remove(driver, slot);
+    }
+
     public rotateObject(
         driver: WebGPUDriver,
         modelSlot: number,
         rot: Vec3 = new Vec3(0.1, 0.1, 0.1),
     ) {
+        console.log('tyring to rotate', modelSlot);
         if (this.models.length <= modelSlot) return;
         const model = this.models[modelSlot]!;
+        if (model.slot === undefined) return;
         model.rotate(rot);
-        this.cubeInstanceBuffer.update(driver, modelSlot, model.getModelMatrix().toColumnMajor());
+        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
     }
 }

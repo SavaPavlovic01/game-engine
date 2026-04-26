@@ -59,10 +59,27 @@ var graphics: Graphics;
 var scene: Scene;
 const cube = new Cube(new Vec3(0, 0, -5));
 const cube1 = new Cube(new Vec3(2, 0, -10), new Vec3(1, 1, 1), new Vec3(2, 2, 5));
+const cube2 = new Cube(new Vec3(2, 0, -10), new Vec3(1, 1, 1), new Vec3(2, 2, 10));
 
 setInterval(() => {
-    scene.rotateObject(graphics.driver, 0);
+    if (cube.slot === undefined) return;
+    scene.rotateObject(graphics.driver, cube.slot);
 }, 50);
+
+setTimeout(() => {
+    scene.removeObject(graphics.driver, 1);
+}, 2000);
+
+setTimeout(() => {
+    scene.addObject(graphics.driver, cube2);
+}, 5000);
+
+setTimeout(() => {
+    setInterval(() => {
+        if (!cube2.slot) return;
+        scene.rotateObject(graphics.driver, cube2.slot);
+    }, 20);
+}, 7000);
 
 window.onload = async () => {
     canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -79,8 +96,8 @@ window.onload = async () => {
     scene.addObject(graphics.driver, cube);
     scene.addObject(graphics.driver, cube1);
 
-    function frame() {
-        scene.renderScene(graphics.driver);
+    async function frame() {
+        await scene.renderScene(graphics.driver);
         requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
