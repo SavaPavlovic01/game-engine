@@ -22,5 +22,9 @@ func MakeChannel(dc *webrtc.DataChannel, label string) (Channel, error) {
 		return LobbyChannel{dc: dc}, nil
 	}
 
+	if label == "data" {
+		return ActionChannel{dc: dc, game: nil}, nil
+	}
+
 	return LobbyChannel{dc: dc}, fmt.Errorf("not a channel i know")
 }

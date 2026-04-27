@@ -11,6 +11,7 @@ export enum LobbyOps {
     joinLobby,
     broadcast,
     otherPlayerJoined,
+    startGame,
 }
 
 export interface LobbyChannelMsg {

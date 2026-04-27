@@ -36,6 +36,7 @@ export class Game {
             this.handleMakeLobbyResp(resp);
             this.handleReciveId(resp);
             this.handleOtherPlayerJoined(resp);
+            this.handleStartGameResponse(resp);
         },
 
         onClose: null,
@@ -97,6 +98,14 @@ export class Game {
         console.log(`changed the player count to ${data.playerCnt}`);
     };
 
+    handleStartGameResponse = (msg: LobbyRequestResponse) => {
+        if (msg.operation != LobbyOps.startGame) return;
+        if (msg.status != 0) {
+            console.log('failed to start game');
+        }
+        alert('game started');
+    };
+
     public makeLobby() {
         console.log('im here');
         if (!this.lobbyChannel || !this.playerId) return;
@@ -117,5 +126,11 @@ export class Game {
             console.log(text.value);
         }
         Lobby.joinLobbyRequest(this.playerId, text.value, this.lobbyChannel);
+    }
+
+    public startGame() {
+        console.log('starting game');
+        if (!this.lobby || !this.lobbyChannel || !this.playerId || !this.lobby.Id) return;
+        Lobby.startGameRequest(this.playerId, this.lobby.Id, this.lobbyChannel);
     }
 }

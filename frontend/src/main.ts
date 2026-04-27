@@ -89,6 +89,9 @@ window.onload = async () => {
     const joinButton = document.getElementById('joinLobby') as HTMLButtonElement;
     joinButton.onclick = () => game.joinLobby();
 
+    const startGameButton = document.getElementById('startGame') as HTMLButtonElement;
+    startGameButton.onclick = () => game.startGame();
+
     graphics = await Graphics.create(canvas);
     scene = new Scene();
     scene.init(graphics.driver, canvas.width, canvas.height);

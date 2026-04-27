@@ -1,6 +1,7 @@
 package globalcontext
 
 import (
+	"cs/game"
 	"cs/lobby"
 	"fmt"
 	"sync"
@@ -11,13 +12,39 @@ var Ctx *GlobalCtx
 type GlobalCtx struct {
 	Lobbies map[string]*lobby.Lobby
 	Players map[string]*lobby.Player // idk if i really need this
+	Games   map[string]*game.Game
 
 	playerMu sync.RWMutex
 	lobbyMu  sync.RWMutex
+	gameMu   sync.RWMutex
 }
 
 func MakeGlobalCtx() *GlobalCtx {
-	return &GlobalCtx{Lobbies: make(map[string]*lobby.Lobby), Players: make(map[string]*lobby.Player)}
+	return &GlobalCtx{Lobbies: make(map[string]*lobby.Lobby), Players: make(map[string]*lobby.Player), Games: make(map[string]*game.Game)}
+}
+
+func (gc *GlobalCtx) AddGame(newGame *game.Game) error {
+	gc.gameMu.Lock()
+	defer gc.gameMu.Unlock()
+
+	if _, contains := gc.Games[newGame.Lobby.Id]; contains {
+		return fmt.Errorf("game already exists")
+	}
+
+	gc.Games[newGame.Lobby.Id] = newGame
+	return nil
+}
+
+func (gc *GlobalCtx) GetGame(id string) (*game.Game, error) {
+	gc.gameMu.RLock()
+	defer gc.gameMu.RUnlock()
+
+	game, contains := gc.Games[id]
+	if !contains {
+		return nil, fmt.Errorf("game does not exist id = %s", id)
+	}
+
+	return game, nil
 }
 
 func (gc *GlobalCtx) AddPlayer(player *lobby.Player) error {

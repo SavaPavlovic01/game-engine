@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"cs/game"
 	globalcontext "cs/globalContext"
 	"cs/lobby"
 	"encoding/json"
@@ -27,6 +28,7 @@ const (
 	joinLobby
 	broadcast
 	playerJoinedLobbyBroadcast
+	startGame
 )
 
 type LobbyMessageOut struct {
@@ -45,12 +47,55 @@ type LobbyRequestResponse struct {
 	Values    any          `json:"values"`
 }
 
+func (lc LobbyChannel) SendText(msg string) error {
+	return lc.dc.SendText(msg)
+}
+
 func sendOpOkResponse(op LobbyOp, body any, dc *webrtc.DataChannel) {
 	resp := LobbyRequestResponse{Operation: op, Status: OK, Values: body}
 
-	data, _ := json.Marshal(resp)
+	data, err := json.Marshal(resp)
+	if err != nil {
+		fmt.Println("failed to marshal")
+	}
 
 	dc.SendText(string(data))
+}
+
+// TODO: maybe check if the player is in a lobby
+func (lc LobbyChannel) handleStartGame(msg LobbyMessageIn) error {
+
+	fmt.Println("starting game")
+	type msgValue struct {
+		PlayerId string `json:"playerId"`
+		LobbyId  string `json:"lobbyId"`
+	}
+
+	var value msgValue
+	err := json.Unmarshal(msg.Values, &value)
+	if err != nil {
+		return err
+	}
+
+	lobby, err := globalcontext.Ctx.GetLobby(value.LobbyId)
+	if err != nil {
+		return err
+	}
+
+	game := game.MakeGame(lobby)
+
+	err = globalcontext.Ctx.AddGame(game)
+	if err != nil {
+		fmt.Printf("im here %v", err)
+		return err
+	}
+
+	fmt.Println("did we get ehre")
+	// go game.start() here or something like that
+
+	fmt.Println("started game")
+	sendOpOkResponse(msg.Operation, struct{}{}, lc.dc)
+	return nil
 }
 
 func (lc LobbyChannel) handleCreateLobby(msg LobbyMessageIn) error {
@@ -142,6 +187,7 @@ func (lc LobbyChannel) handleBroadcast(msg LobbyMessageIn) error {
 	if err != nil {
 		return err
 	}
+
 	sendOpOkResponse(msg.Operation, struct{}{}, lc.dc)
 
 	return lobby.Broadcast(values.Message, values.PlayerId)
@@ -150,6 +196,7 @@ func (lc LobbyChannel) handleBroadcast(msg LobbyMessageIn) error {
 func (lc LobbyChannel) handleMessage(msg LobbyMessageIn) {
 	handleError := func(err error) {
 		if err != nil {
+			fmt.Println("failed to do something")
 			lc.dc.SendText("failed to perform operation, error:" + err.Error())
 		}
 	}
@@ -161,6 +208,8 @@ func (lc LobbyChannel) handleMessage(msg LobbyMessageIn) {
 		handleError(lc.handleJoinLobby(msg))
 	case broadcast:
 		handleError(lc.handleBroadcast(msg))
+	case startGame:
+		handleError(lc.handleStartGame(msg))
 	default:
 		fmt.Println("i dont recognize that ")
 	}
@@ -189,7 +238,7 @@ func (lc LobbyChannel) OnOpen() {
 
 	fmt.Println("send player id")
 	_ = lc.dc.SendText(string(data))
-	player := lobby.MakePlayer(id, lc.dc)
+	player := lobby.MakePlayer(id, lc)
 	globalcontext.Ctx.AddPlayer(player)
 }
 

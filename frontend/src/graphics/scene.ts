@@ -215,8 +215,6 @@ export class Scene {
     public addObject(driver: WebGPUDriver, model: Model) {
         model.slot = this.cubeInstanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
         this.models[model.slot] = model;
-        console.log('adding object');
-        console.log('slot ', model.slot);
     }
 
     public removeObject(driver: WebGPUDriver, slot: number) {
@@ -228,7 +226,6 @@ export class Scene {
         modelSlot: number,
         rot: Vec3 = new Vec3(0.1, 0.1, 0.1),
     ) {
-        console.log('tyring to rotate', modelSlot);
         if (this.models.length <= modelSlot) return;
         const model = this.models[modelSlot]!;
         if (model.slot === undefined) return;

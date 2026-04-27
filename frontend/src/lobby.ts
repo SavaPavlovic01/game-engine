@@ -31,4 +31,14 @@ export class Lobby {
         lobbyChannel.send(JSON.stringify(data));
         console.log('send lobby join request');
     }
+
+    static startGameRequest(playerId: string, lobbyId: string, lobbyChannel: RTCDataChannel) {
+        const data: LobbyChannelMsg = {
+            operation: LobbyOps.startGame,
+            values: { playerId: playerId, lobbyId: lobbyId },
+        };
+
+        lobbyChannel.send(JSON.stringify(data));
+        console.log('send game start request');
+    }
 }

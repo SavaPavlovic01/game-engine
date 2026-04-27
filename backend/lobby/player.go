@@ -2,17 +2,20 @@ package lobby
 
 import (
 	"sync"
-
-	"github.com/pion/webrtc/v3"
 )
 
-type Player struct {
-	Id           string
-	InLobby      bool
-	LobbyChannel *webrtc.DataChannel
-	Mu           sync.RWMutex
+type MessageSender interface {
+	SendText(msg string) error
 }
 
-func MakePlayer(Id string, lobbyChannel *webrtc.DataChannel) *Player {
+type Player struct {
+	Id            string
+	InLobby       bool
+	LobbyChannel  MessageSender
+	ActionChannel MessageSender
+	Mu            sync.RWMutex
+}
+
+func MakePlayer(Id string, lobbyChannel MessageSender) *Player {
 	return &Player{Id: Id, InLobby: false, LobbyChannel: lobbyChannel}
 }
