@@ -90,11 +90,19 @@ func (lc LobbyChannel) handleStartGame(msg LobbyMessageIn) error {
 		return err
 	}
 
-	fmt.Println("did we get ehre")
+	data, err := json.Marshal(LobbyRequestResponse{Operation: startGame, Status: OK})
+	if err != nil {
+		return err
+	}
+
+	err = lobby.Broadcast(string(data), "")
+	if err != nil {
+		return err
+	}
+
 	// go game.start() here or something like that
 
 	fmt.Println("started game")
-	sendOpOkResponse(msg.Operation, struct{}{}, lc.dc)
 	return nil
 }
 

@@ -19,12 +19,6 @@ export class Game {
     async initChannels() {
         if (this.lobbyChannel && this.dataChannel) return;
         this.lobbyChannel = await WebRtcHandler.openChannel('lobby', this.lobbyChannelOps, true, 5);
-        this.dataChannel = await WebRtcHandler.openChannel(
-            'data',
-            { onClose: null, onError: null, onMessage: null, onOpen: null },
-            false,
-            0,
-        );
     }
 
     lobbyChannelOps: ChannelOps = {
@@ -59,7 +53,7 @@ export class Game {
         console.log('made lobby');
     };
 
-    handleReciveId = (msg: LobbyRequestResponse) => {
+    handleReciveId = async (msg: LobbyRequestResponse) => {
         interface receiveIdValue {
             playerId: string;
         }
@@ -98,11 +92,19 @@ export class Game {
         console.log(`changed the player count to ${data.playerCnt}`);
     };
 
-    handleStartGameResponse = (msg: LobbyRequestResponse) => {
+    handleStartGameResponse = async (msg: LobbyRequestResponse) => {
         if (msg.operation != LobbyOps.startGame) return;
         if (msg.status != 0) {
             console.log('failed to start game');
         }
+
+        this.dataChannel = await WebRtcHandler.openChannel(
+            `data-${this.lobby?.Id}`,
+            { onClose: null, onError: null, onMessage: null, onOpen: null },
+            false,
+            0,
+        );
+
         alert('game started');
     };
 
