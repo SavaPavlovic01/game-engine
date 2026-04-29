@@ -41,6 +41,18 @@ export class Game {
         },
     };
 
+    gameStateChannelOps: ChannelOps = {
+        onMessage: (e) => {
+            console.log('got game state message', e.data);
+        },
+
+        onClose: null,
+        onError: null,
+        onOpen: (e) => {
+            console.log('opened game state channel');
+        },
+    };
+
     handleMakeLobbyResp = (msg: LobbyRequestResponse) => {
         interface lobbyCreatedValue {
             lobbyId: string;
@@ -98,9 +110,10 @@ export class Game {
             console.log('failed to start game');
         }
 
+        console.log('opening data channel');
         this.dataChannel = await WebRtcHandler.openChannel(
-            `data-${this.lobby?.Id}`,
-            { onClose: null, onError: null, onMessage: null, onOpen: null },
+            `data--${this.lobby?.Id}--${this.playerId}`,
+            this.gameStateChannelOps,
             false,
             0,
         );

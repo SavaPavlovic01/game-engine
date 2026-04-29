@@ -6,7 +6,7 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --format=esm && copy src\\\\index.html dist\\\\index.html",
         "start": "node dist/bundle.js",
-        "serve": "node .\\scripts\\buildShaders.ts && copy src\\\\index.html dist\\\\index.html && esbuild src/main.ts --bundle --outfile=dist/bundle.js --format=esm --servedir=dist",
+        "serve": "node .\\scripts\\buildShaders.js && copy src\\\\index.html dist\\\\index.html && esbuild src/main.ts --bundle --outfile=dist/bundle.js --format=esm --servedir=dist",
         "shaders": "node .\\scripts\\buildShaders.ts",
         "clean": "powershell -Command \"Remove-Item -Path 'dist\\*' -Recurse -Force\""
     },

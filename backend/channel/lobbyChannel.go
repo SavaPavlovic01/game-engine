@@ -100,7 +100,7 @@ func (lc LobbyChannel) handleStartGame(msg LobbyMessageIn) error {
 		return err
 	}
 
-	// go game.start() here or something like that
+	go game.StartLoop()
 
 	fmt.Println("started game")
 	return nil
