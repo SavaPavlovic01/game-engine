@@ -2,6 +2,8 @@ package lobby
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 
 	"github.com/google/uuid"
@@ -31,6 +33,13 @@ func (l *Lobby) AddPlayer(player *Player) error {
 	l.Players[player.Id] = player
 
 	return nil
+}
+
+func (l *Lobby) GetPlayerIds() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	ids := slices.Collect(maps.Keys(l.Players))
+	return ids
 }
 
 func (l *Lobby) Broadcast(msg string, skipId string) error {

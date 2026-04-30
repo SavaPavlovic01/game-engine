@@ -29,7 +29,10 @@ export class GameState {
 
     public movePlayer(playerId: string, position: Vec3) {
         const player = this.players.get(playerId);
-        if (!player) return;
+        if (!player) {
+            console.log(`player with id = ${playerId} does not exist`);
+            return;
+        }
         this.scene.setObjectTranslate(this.graphics.driver, player, position);
     }
 }

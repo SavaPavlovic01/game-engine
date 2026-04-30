@@ -32,10 +32,10 @@ export class GameStateChannel {
                 x: number;
                 y: number;
             }
-            const players = Object.values(data.players);
-            const player = players[0] as state;
-            console.log(player);
-            this.game.gameState.movePlayer(player.playerId, new Vec3(0, 0, -player.x));
+            const players = Object.values(data.players) as state[];
+            players.forEach((player: state) => {
+                this.game.gameState.movePlayer(player.playerId, new Vec3(-player.y, 0, -player.x));
+            });
             console.log('got game state message', players);
         },
 

@@ -49,6 +49,7 @@ export class LobbyChannel {
         interface respValue {
             lobbyId: string;
             playerCnt: number;
+            playerIds: string[];
         }
 
         if (msg.operation != LobbyOps.joinLobby) return;
@@ -59,6 +60,11 @@ export class LobbyChannel {
 
         const lobby = new Lobby(data.lobbyId, data.playerCnt);
         this.game.setLobby(lobby);
+
+        data.playerIds.forEach((id: string) => {
+            this.game.gameState.addPlayer(id);
+        });
+
         console.log('joined lobby');
     };
 
@@ -74,7 +80,6 @@ export class LobbyChannel {
         const data = msg.values as respValue;
         this.game.lobby.PlayerCnt = data.playerCnt;
         this.game.gameState.addPlayer(data.playerId);
-        this.game.gameState.addPlayer(data.playerId!);
         console.log(`changed the player count to ${data.playerCnt}`);
     };
 

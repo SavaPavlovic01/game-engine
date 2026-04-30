@@ -34,12 +34,15 @@ window.onkeydown = (ev: KeyboardEvent) => {
             break;
         case 'a':
             game.gameState.scene.camera.translate(new Vec3(-1, 0, 0));
+            game.movePlayer(0, 1);
             break;
         case 's':
             game.gameState.scene.camera.translate(new Vec3(0, 0, 1));
+            game.movePlayer(-1, 0);
             break;
         case 'd':
             game.gameState.scene.camera.translate(new Vec3(1, 0, 0));
+            game.movePlayer(0, -1);
         default:
             break;
     }

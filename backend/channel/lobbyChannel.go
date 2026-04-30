@@ -162,6 +162,12 @@ func (lc LobbyChannel) handleJoinLobby(msg LobbyMessageIn) error {
 		return err
 	}
 
+	ids := lobby.GetPlayerIds()
+
+	for _, id := range ids {
+		fmt.Println(id)
+	}
+
 	data, err := json.Marshal(LobbyRequestResponse{Operation: playerJoinedLobbyBroadcast, Status: OK, Values: struct {
 		PlayerId  string `json:"playerId"`
 		PlayerCnt int32  `json:"playerCnt"`
@@ -173,9 +179,10 @@ func (lc LobbyChannel) handleJoinLobby(msg LobbyMessageIn) error {
 	}
 
 	sendOpOkResponse(msg.Operation, struct {
-		LobbyId   string `json:"lobbyId"`
-		PlayerCnt int32  `json:"playerCnt"`
-	}{LobbyId: lobby.Id, PlayerCnt: int32(lobby.PlayerCnt)}, lc.dc)
+		LobbyId   string   `json:"lobbyId"`
+		PlayerCnt int32    `json:"playerCnt"`
+		PlayerIds []string `json:"playerIds"`
+	}{LobbyId: lobby.Id, PlayerCnt: int32(lobby.PlayerCnt), PlayerIds: ids}, lc.dc)
 	return nil
 }
 
