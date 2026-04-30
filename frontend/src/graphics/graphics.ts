@@ -2,7 +2,7 @@ import { WebGPUDriver } from './webGpuDriver';
 
 export class Graphics {
     public driver: WebGPUDriver;
-    public canvas?: HTMLCanvasElement;
+    public canvas!: HTMLCanvasElement;
 
     constructor(driver: WebGPUDriver) {
         this.driver = driver;

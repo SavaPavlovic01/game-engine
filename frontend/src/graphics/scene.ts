@@ -19,10 +19,8 @@ export class Scene {
     private vpBuffer!: GPUBuffer;
     private vpBindGroup!: GPUBindGroup;
 
-    constructor() {
-        const pos = new Vec3(0, 0, 0);
-        const rot = new Vec3(0, 0, 0);
-        this.camera = new Camera(pos, rot);
+    constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
+        this.camera = new Camera(cameraPos, cameraRot);
         this.models = [];
     }
 
@@ -165,6 +163,8 @@ export class Scene {
             this.inited = true;
         }
 
+        if (this.models.length === 0) return;
+
         driver.device.queue.writeBuffer(this.drawArgsBuffer, 0, new Uint32Array([36, 0, 0, 0, 0]));
         const encoder = driver.device.createCommandEncoder();
 
@@ -230,6 +230,15 @@ export class Scene {
         const model = this.models[modelSlot]!;
         if (model.slot === undefined) return;
         model.rotate(rot);
+        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+    }
+
+    public setObjectTranslate(driver: WebGPUDriver, model: Model, position: Vec3) {
+        if (model.slot === undefined) {
+            console.log('slot not set');
+            return;
+        }
+        model.setTranslate(position);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
     }
 }

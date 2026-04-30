@@ -3,129 +3,66 @@ import {
     type ChannelOps,
     type LobbyChannelMsg,
     type LobbyRequestResponse,
-} from './channels.js';
+} from './channel/channels.js';
+import type { GameStateChannel } from './channel/gameStateChannel.js';
+import { Graphics } from './graphics/graphics.js';
+import { Vec3 } from './graphics/math/vec.js';
+import { Cube } from './graphics/objects/cube.js';
+import { Scene } from './graphics/scene.js';
 import { Lobby } from './lobby.js';
+import { LobbyChannel } from './channel/lobbyChannel.js';
 import { WebRtcHandler } from './webrtcHandler.js';
+import { GameState } from './gameState.js';
 
 export class Game {
-    public lobbyChannel?: RTCDataChannel;
-    public dataChannel?: RTCDataChannel;
+    public lobbyChannel?: LobbyChannel;
+    public dataChannel?: GameStateChannel;
+
+    public graphics!: Graphics;
+    public canvas!: HTMLCanvasElement;
+
+    public gameState!: GameState;
 
     public lobby?: Lobby;
     public playerId?: string;
 
     constructor() {}
 
-    async initChannels() {
-        if (this.lobbyChannel && this.dataChannel) return;
-        this.lobbyChannel = await WebRtcHandler.openChannel('lobby', this.lobbyChannelOps, true, 5);
+    async init() {
+        this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
+        this.graphics = await Graphics.create(this.canvas);
+        this.gameState = new GameState(this.graphics);
+
+        this.lobbyChannel = await LobbyChannel.create(this);
     }
 
-    lobbyChannelOps: ChannelOps = {
-        onMessage: (e) => {
-            console.log(e.data);
-            const resp = JSON.parse(e.data as string) as LobbyRequestResponse;
-            console.log(`got respone ${resp}`);
-            this.handleJoinLobbyResp(resp);
-            this.handleMakeLobbyResp(resp);
-            this.handleReciveId(resp);
-            this.handleOtherPlayerJoined(resp);
-            this.handleStartGameResponse(resp);
-        },
+    public setLobby(lobby: Lobby) {
+        this.lobby = lobby;
+    }
 
-        onClose: null,
-        onError: null,
-        onOpen: (e) => {
-            console.log('opened lobby channel');
-            const channel = e.target as RTCDataChannel;
-        },
-    };
+    public setGameStateChannel(channel: GameStateChannel) {
+        this.dataChannel = channel;
+    }
 
-    gameStateChannelOps: ChannelOps = {
-        onMessage: (e) => {
-            console.log('got game state message', e.data);
-        },
+    public movePlayer(dirX: number, dirY: number) {
+        if (!this.dataChannel) return;
+        const moveActionMsg = {
+            playerId: this.playerId,
+            actionType: 0,
+            tick: 0,
+            dirx: dirX,
+            diry: dirY,
+        };
 
-        onClose: null,
-        onError: null,
-        onOpen: (e) => {
-            console.log('opened game state channel');
-        },
-    };
-
-    handleMakeLobbyResp = (msg: LobbyRequestResponse) => {
-        interface lobbyCreatedValue {
-            lobbyId: string;
-        }
-
-        if (msg.operation != LobbyOps.makeLobby) return;
-        const data = msg.values as lobbyCreatedValue;
-        this.lobby = new Lobby(data.lobbyId, 0);
-        console.log(this.lobby);
-        console.log('made lobby');
-    };
-
-    handleReciveId = async (msg: LobbyRequestResponse) => {
-        interface receiveIdValue {
-            playerId: string;
-        }
-
-        if (msg.operation != LobbyOps.playerConnected) return;
-        const data = msg.values as receiveIdValue;
-        this.playerId = data.playerId;
-        console.log('put the id in its place');
-    };
-
-    handleJoinLobbyResp = (msg: LobbyRequestResponse) => {
-        interface respValue {
-            lobbyId: string;
-            playerCnt: number;
-        }
-
-        if (msg.operation != LobbyOps.joinLobby) return;
-        const data = msg.values as respValue;
-        if (msg.status != 0) {
-            console.log('failed to join lobby');
-        }
-
-        this.lobby = new Lobby(data.lobbyId, data.playerCnt);
-        console.log('joined lobby');
-    };
-
-    handleOtherPlayerJoined = (msg: LobbyRequestResponse) => {
-        interface respValue {
-            playerCnt: number;
-        }
-
-        if (msg.operation != LobbyOps.otherPlayerJoined) return;
-        if (!this.lobby) return;
-        const data = msg.values as respValue;
-        this.lobby.PlayerCnt = data.playerCnt;
-        console.log(`changed the player count to ${data.playerCnt}`);
-    };
-
-    handleStartGameResponse = async (msg: LobbyRequestResponse) => {
-        if (msg.operation != LobbyOps.startGame) return;
-        if (msg.status != 0) {
-            console.log('failed to start game');
-        }
-
-        console.log('opening data channel');
-        this.dataChannel = await WebRtcHandler.openChannel(
-            `data--${this.lobby?.Id}--${this.playerId}`,
-            this.gameStateChannelOps,
-            false,
-            0,
-        );
-
-        alert('game started');
-    };
+        if (!this.dataChannel || !this.dataChannel.channel) return;
+        this.dataChannel.channel.send(JSON.stringify(moveActionMsg));
+    }
 
     public makeLobby() {
         console.log('im here');
         if (!this.lobbyChannel || !this.playerId) return;
         console.log('sending');
-        Lobby.makeLobbyRequest(this.playerId, this.lobbyChannel);
+        Lobby.makeLobbyRequest(this.playerId, this.lobbyChannel.channel);
     }
 
     public joinLobby() {
@@ -140,12 +77,12 @@ export class Game {
             console.log('found text');
             console.log(text.value);
         }
-        Lobby.joinLobbyRequest(this.playerId, text.value, this.lobbyChannel);
+        Lobby.joinLobbyRequest(this.playerId, text.value, this.lobbyChannel.channel);
     }
 
     public startGame() {
         console.log('starting game');
         if (!this.lobby || !this.lobbyChannel || !this.playerId || !this.lobby.Id) return;
-        Lobby.startGameRequest(this.playerId, this.lobby.Id, this.lobbyChannel);
+        Lobby.startGameRequest(this.playerId, this.lobby.Id, this.lobbyChannel.channel);
     }
 }

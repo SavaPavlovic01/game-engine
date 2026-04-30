@@ -1,4 +1,4 @@
-import { LobbyOps, type LobbyChannelMsg } from './channels.js';
+import { LobbyOps, type LobbyChannelMsg } from './channel/channels.js';
 
 export class Lobby {
     Id?: string;

@@ -4,85 +4,11 @@ import { Vec3 } from './graphics/math/vec.js';
 import { Cube } from './graphics/objects/cube.js';
 import { Scene } from './graphics/scene.js';
 
-interface LobbyInfo {
-    id: string;
-    playerCnt: number;
-}
-
-var canvas: HTMLCanvasElement;
-var ctx: CanvasRenderingContext2D | null;
-
-interface position {
-    x: number;
-    y: number;
-}
-
-let playerPos: position = { x: 0, y: 0 };
-let otherPlayerPos: position = { x: 25, y: 25 };
-
-const playerSize = 25;
-const playerSpeed = 5;
-
-function drawPlayer(pos: position, color: string = 'red') {
-    if (!ctx) return;
-    const w = canvas.width;
-    const h = canvas.height;
-    const canvasX = pos.x + w / 2 - playerSize / 2;
-    const canvasY = pos.y + h / 2 - playerSize / 2;
-
-    ctx.fillStyle = color;
-    ctx.fillRect(canvasX, canvasY, playerSize, playerSize);
-}
-
-function drawPlayers() {
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawPlayer(playerPos);
-    drawPlayer(otherPlayerPos, 'blue');
-}
-
-function initCanvas() {
-    ctx = canvas.getContext('2d');
-    if (!canvas) {
-        console.log('canvas is null');
-        return;
-    }
-    if (!ctx) {
-        console.log('ctx is null');
-        return;
-    }
-    ctx.fillStyle = 'red';
-    drawPlayers();
-}
-
-var graphics: Graphics;
-var scene: Scene;
-const cube = new Cube(new Vec3(0, 0, -5));
-const cube1 = new Cube(new Vec3(2, 0, -10), new Vec3(1, 1, 1), new Vec3(2, 2, 5));
-const cube2 = new Cube(new Vec3(2, 0, -10), new Vec3(1, 1, 1), new Vec3(2, 2, 10));
-
-setInterval(() => {
-    if (cube.slot === undefined) return;
-    scene.rotateObject(graphics.driver, cube.slot);
-}, 50);
-
-setTimeout(() => {
-    scene.removeObject(graphics.driver, 1);
-}, 2000);
-
-setTimeout(() => {
-    scene.addObject(graphics.driver, cube2);
-}, 5000);
-
-setTimeout(() => {
-    setInterval(() => {
-        if (!cube2.slot) return;
-        scene.rotateObject(graphics.driver, cube2.slot);
-    }, 20);
-}, 7000);
+const game = new Game();
 
 window.onload = async () => {
-    canvas = document.getElementById('canvas') as HTMLCanvasElement;
+    await game.init();
+
     const button = document.getElementById('makeLobbyButton') as HTMLButtonElement;
     button.onclick = () => game.makeLobby();
 
@@ -92,15 +18,8 @@ window.onload = async () => {
     const startGameButton = document.getElementById('startGame') as HTMLButtonElement;
     startGameButton.onclick = () => game.startGame();
 
-    graphics = await Graphics.create(canvas);
-    scene = new Scene();
-    scene.init(graphics.driver, canvas.width, canvas.height);
-
-    scene.addObject(graphics.driver, cube);
-    scene.addObject(graphics.driver, cube1);
-
     async function frame() {
-        await scene.renderScene(graphics.driver);
+        await game.gameState.scene.renderScene(game.graphics.driver);
         requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -110,20 +29,18 @@ window.onkeydown = (ev: KeyboardEvent) => {
     console.log('hellos');
     switch (ev.key) {
         case 'w':
-            scene.camera.translate(new Vec3(0, 0, -1));
+            game.gameState.scene.camera.translate(new Vec3(0, 0, -1));
+            game.movePlayer(1, 0);
             break;
         case 'a':
-            scene.camera.translate(new Vec3(-1, 0, 0));
+            game.gameState.scene.camera.translate(new Vec3(-1, 0, 0));
             break;
         case 's':
-            scene.camera.translate(new Vec3(0, 0, 1));
+            game.gameState.scene.camera.translate(new Vec3(0, 0, 1));
             break;
         case 'd':
-            scene.camera.translate(new Vec3(1, 0, 0));
+            game.gameState.scene.camera.translate(new Vec3(1, 0, 0));
         default:
             break;
     }
 };
-
-const game = new Game();
-await game.initChannels();

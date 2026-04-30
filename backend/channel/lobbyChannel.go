@@ -163,8 +163,9 @@ func (lc LobbyChannel) handleJoinLobby(msg LobbyMessageIn) error {
 	}
 
 	data, err := json.Marshal(LobbyRequestResponse{Operation: playerJoinedLobbyBroadcast, Status: OK, Values: struct {
-		PlayerCnt int32 `json:"playerCnt"`
-	}{int32(lobby.PlayerCnt)}})
+		PlayerId  string `json:"playerId"`
+		PlayerCnt int32  `json:"playerCnt"`
+	}{player.Id, int32(lobby.PlayerCnt)}})
 
 	err = lobby.Broadcast(string(data), player.Id)
 	if err != nil {

@@ -35,7 +35,7 @@ func (a MoveAction) Apply(g *Game) error {
 		return fmt.Errorf("failed to move player, player with id = %s does not exist", a.PlayerId)
 	}
 
-	player.X += a.DirX * PLAYER_SPEED * float32(TICK_PERIOD.Seconds())
-	player.Y += a.DirY * PLAYER_SPEED * float32(TICK_PERIOD.Seconds())
+	player.X += a.DirX * PLAYER_SPEED //* float32(TICK_PERIOD.Seconds())
+	player.Y += a.DirY * PLAYER_SPEED //* float32(TICK_PERIOD.Seconds())
 	return nil
 }

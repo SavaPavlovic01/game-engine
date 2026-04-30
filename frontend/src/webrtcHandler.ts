@@ -1,4 +1,4 @@
-import type { ChannelOps } from './channels.js';
+import type { ChannelOps } from './channel/channels.js';
 import { backendUrl } from './constants.js';
 
 export class WebRtcHandler {

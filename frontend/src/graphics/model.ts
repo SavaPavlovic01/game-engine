@@ -94,6 +94,11 @@ export abstract class Model {
         this.modelMatrix = this.buildModelMatrix();
     }
 
+    public setTranslate(trans: Vec3) {
+        this.translation = trans;
+        this.modelMatrix = this.buildModelMatrix();
+    }
+
     public rotate(dir: Vec3) {
         this.rotation = this.rotation.add(dir);
         this.modelMatrix = this.buildModelMatrix();
