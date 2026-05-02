@@ -13,6 +13,7 @@ import { Lobby } from './lobby.js';
 import { LobbyChannel } from './channel/lobbyChannel.js';
 import { WebRtcHandler } from './webrtcHandler.js';
 import { GameState } from './gameState.js';
+import { TICK_PERIOD } from './constants.js';
 
 export class Game {
     public lobbyChannel?: LobbyChannel;
@@ -25,6 +26,10 @@ export class Game {
 
     public lobby?: Lobby;
     public playerId?: string;
+
+    public tick: number = 0;
+    private lastTime: number = 0;
+    private accumulator: number = 0;
 
     constructor() {}
 
@@ -44,45 +49,36 @@ export class Game {
         this.dataChannel = channel;
     }
 
+    public startRender() {
+        this.lastTime = performance.now();
+        requestAnimationFrame(this.frame);
+    }
+
+    private async frame(now: number) {
+        await this.gameState.scene.renderScene(this.graphics.driver);
+        const delta = now - this.lastTime;
+        this.lastTime = now;
+        this.accumulator += delta;
+
+        while (this.accumulator >= TICK_PERIOD) {
+            this.tick++;
+            this.accumulator -= TICK_PERIOD;
+        }
+
+        requestAnimationFrame(this.frame);
+    }
+
     public movePlayer(dirX: number, dirY: number) {
         if (!this.dataChannel) return;
         const moveActionMsg = {
             playerId: this.playerId,
             actionType: 0,
-            tick: 0,
+            tick: this.tick,
             dirx: dirX,
             diry: dirY,
         };
 
         if (!this.dataChannel || !this.dataChannel.channel) return;
         this.dataChannel.channel.send(JSON.stringify(moveActionMsg));
-    }
-
-    public makeLobby() {
-        console.log('im here');
-        if (!this.lobbyChannel || !this.playerId) return;
-        console.log('sending');
-        Lobby.makeLobbyRequest(this.playerId, this.lobbyChannel.channel);
-    }
-
-    public joinLobby() {
-        console.log('trying to join lobby');
-        if (!this.playerId || !this.lobbyChannel) return;
-        if (this.lobby && this.lobby.InLobby) {
-            console.log('already in lobby');
-            return;
-        }
-        const text = document.getElementById('lobbyField') as HTMLInputElement;
-        if (text) {
-            console.log('found text');
-            console.log(text.value);
-        }
-        Lobby.joinLobbyRequest(this.playerId, text.value, this.lobbyChannel.channel);
-    }
-
-    public startGame() {
-        console.log('starting game');
-        if (!this.lobby || !this.lobbyChannel || !this.playerId || !this.lobby.Id) return;
-        Lobby.startGameRequest(this.playerId, this.lobby.Id, this.lobbyChannel.channel);
     }
 }
