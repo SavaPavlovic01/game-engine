@@ -35,4 +35,16 @@ export class GameState {
         }
         this.scene.setObjectTranslate(this.graphics.driver, player, position);
     }
+
+    public offsetPlayer(playerId: string, offset: Vec3) {
+        const player = this.players.get(playerId);
+        if (!player) {
+            console.log(`player with id = ${playerId} does not exist`);
+            return;
+        }
+
+        console.log(`offseting player x = ${offset.x()}, y = ${offset.z()}`);
+
+        this.scene.offsetObject(this.graphics.driver, player, offset);
+    }
 }

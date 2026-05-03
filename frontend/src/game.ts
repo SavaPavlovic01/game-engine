@@ -14,6 +14,7 @@ import { LobbyChannel } from './channel/lobbyChannel.js';
 import { WebRtcHandler } from './webrtcHandler.js';
 import { GameState } from './gameState.js';
 import { TICK_PERIOD } from './constants.js';
+import { ActionBuffer } from './actions/actionBuffer.js';
 
 export class Game {
     public lobbyChannel?: LobbyChannel;
@@ -31,7 +32,19 @@ export class Game {
     private lastTime: number = 0;
     private accumulator: number = 0;
 
+    public actionBuffer: ActionBuffer = new ActionBuffer();
+
     constructor() {}
+
+    public static async create() {
+        const game = new Game();
+        game.canvas = document.getElementById('canvas') as HTMLCanvasElement;
+        game.graphics = await Graphics.create(game.canvas);
+        game.gameState = new GameState(game.graphics);
+
+        game.lobbyChannel = await LobbyChannel.create(game);
+        return game;
+    }
 
     async init() {
         this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -54,7 +67,8 @@ export class Game {
         requestAnimationFrame(this.frame);
     }
 
-    private async frame(now: number) {
+    public frame = async (now: number) => {
+        if (!this.gameState) return;
         await this.gameState.scene.renderScene(this.graphics.driver);
         const delta = now - this.lastTime;
         this.lastTime = now;
@@ -66,10 +80,15 @@ export class Game {
         }
 
         requestAnimationFrame(this.frame);
-    }
+    };
 
     public movePlayer(dirX: number, dirY: number) {
-        if (!this.dataChannel) return;
+        //this.gameState.offsetPlayer(this.playerId!, new Vec3(-dirY, 0, -dirX));
+        if (!this.dataChannel || !this.dataChannel.channel || !this.playerId) {
+            console.log('not ready to send');
+            return;
+        }
+
         const moveActionMsg = {
             playerId: this.playerId,
             actionType: 0,
@@ -78,7 +97,6 @@ export class Game {
             diry: dirY,
         };
 
-        if (!this.dataChannel || !this.dataChannel.channel) return;
         this.dataChannel.channel.send(JSON.stringify(moveActionMsg));
     }
 }

@@ -26,17 +26,29 @@ export class GameStateChannel {
 
     gameStateChannelOps: ChannelOps = {
         onMessage: (e) => {
-            const data = JSON.parse(e.data);
-            interface state {
+            type Player = {
                 playerId: string;
                 x: number;
                 y: number;
+            };
+
+            type GameState = {
+                tick: number;
+                players: Record<string, Player>;
+            };
+
+            const data = JSON.parse(e.data) as GameState;
+            if (!data || !data.players) return;
+            console.log(data);
+            for (const [playerId, player] of Object.entries(data.players)) {
+                if (playerId != this.game.playerId) {
+                    this.game.gameState.movePlayer(playerId, new Vec3(-player.y, 0, -player.x));
+                } else {
+                    this.game.actionBuffer.discardUpTo(data.tick);
+                    const state = this.game.actionBuffer.replay({ x: player.x, y: player.y });
+                    this.game.gameState.movePlayer(playerId, new Vec3(-state.y, 0, -state.x));
+                }
             }
-            const players = Object.values(data.players) as state[];
-            players.forEach((player: state) => {
-                this.game.gameState.movePlayer(player.playerId, new Vec3(-player.y, 0, -player.x));
-            });
-            console.log('got game state message', players);
         },
 
         onClose: null,

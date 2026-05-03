@@ -1,3 +1,4 @@
+import { MoveAction } from './actions/action';
 import type { Game } from './game';
 import { Vec3 } from './graphics/math/vec';
 import { Lobby } from './lobby';
@@ -50,24 +51,35 @@ export class InputHandler {
 
     public onKeydown = (ev: KeyboardEvent) => {
         console.log('hellos');
+        let dx = 0;
+        let dy = 0;
         switch (ev.key) {
             case 'w':
                 this.game.gameState.scene.camera.translate(new Vec3(0, 0, -1));
-                this.game.movePlayer(1, 0);
+                dx = 1;
+                dy = 0;
                 break;
             case 'a':
                 this.game.gameState.scene.camera.translate(new Vec3(-1, 0, 0));
-                this.game.movePlayer(0, 1);
+                dx = 0;
+                dy = 1;
                 break;
             case 's':
                 this.game.gameState.scene.camera.translate(new Vec3(0, 0, 1));
-                this.game.movePlayer(-1, 0);
+                dx = -1;
+                dy = 0;
                 break;
             case 'd':
                 this.game.gameState.scene.camera.translate(new Vec3(1, 0, 0));
-                this.game.movePlayer(0, -1);
-            default:
+                dx = 0;
+                dy = -1;
                 break;
+            default:
+                return;
         }
+
+        const action = new MoveAction(this.game.tick, dx, dy);
+        action.invoke(this.game);
+        this.game.actionBuffer.push(action);
     };
 }

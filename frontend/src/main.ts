@@ -5,11 +5,13 @@ import { Cube } from './graphics/objects/cube.js';
 import { Scene } from './graphics/scene.js';
 import { InputHandler } from './inputHandler.js';
 
-const game = new Game();
-const inputHandler = new InputHandler(game);
+var game: Game;
+var inputHandler: InputHandler;
 
 window.onload = async () => {
+    game = await Game.create();
     await game.init();
+    inputHandler = new InputHandler(game);
 
     const button = document.getElementById('makeLobbyButton') as HTMLButtonElement;
     button.onclick = () => inputHandler.makeLobby();

@@ -241,4 +241,13 @@ export class Scene {
         model.setTranslate(position);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
     }
+
+    public offsetObject(driver: WebGPUDriver, model: Model, offset: Vec3) {
+        if (model.slot === undefined) {
+            console.log('slot not set');
+            return;
+        }
+        model.translate(offset);
+        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+    }
 }
