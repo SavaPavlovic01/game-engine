@@ -83,7 +83,7 @@ export class Game {
     };
 
     public movePlayer(dirX: number, dirY: number) {
-        //this.gameState.offsetPlayer(this.playerId!, new Vec3(-dirY, 0, -dirX));
+        this.gameState.offsetPlayer(this.playerId!, new Vec3(-dirY, 0, -dirX));
         if (!this.dataChannel || !this.dataChannel.channel || !this.playerId) {
             console.log('not ready to send');
             return;

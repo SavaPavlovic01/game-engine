@@ -46,6 +46,13 @@ export class GameStateChannel {
                 } else {
                     this.game.actionBuffer.discardUpTo(data.tick);
                     const state = this.game.actionBuffer.replay({ x: player.x, y: player.y });
+                    const trans = this.game.gameState.players.get(this.game.playerId!)?.translation;
+                    if (-state.y != trans?.x() || -state.x != trans.z()) {
+                        console.log(
+                            'diff',
+                            `simulated position ${-state.y}:${-state.x}; where he at right now ${trans?.x()}:${trans?.z()}`,
+                        );
+                    }
                     this.game.gameState.movePlayer(playerId, new Vec3(-state.y, 0, -state.x));
                 }
             }

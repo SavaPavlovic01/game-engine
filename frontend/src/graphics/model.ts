@@ -5,7 +5,7 @@ import type { Vec3 } from './math/vec';
 import type { WebGPUDriver } from './webGpuDriver';
 
 export abstract class Model {
-    private translation: Vec3;
+    public translation: Vec3;
     private rotation: Vec3;
     private scale: Vec3;
 

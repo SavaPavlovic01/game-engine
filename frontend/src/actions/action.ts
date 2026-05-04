@@ -33,6 +33,7 @@ export class MoveAction extends Action {
 
     public invoke(game: Game) {
         if (!game.playerId) return;
+        console.log('invoking actoin');
         game.movePlayer(this.dx, this.dy);
     }
 

@@ -12,7 +12,7 @@ export class ActionBuffer {
         while (i < this.actions.length && this.actions[i]!.getTick() <= tick) {
             i++;
         }
-        this.actions = this.actions.slice(i);
+        this.actions = this.actions.slice(0, i);
     }
 
     replay(state: SimulationState) {
