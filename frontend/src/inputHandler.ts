@@ -74,12 +74,18 @@ export class InputHandler {
                 dx = 0;
                 dy = -1;
                 break;
+            case 'e':
+                this.game.gameState.scene.camera.rotate(new Vec3(0, 0.1, 0));
+                break;
+            case 'q':
+                this.game.gameState.scene.camera.rotate(new Vec3(0, -0.1, 0));
+                break;
             default:
                 return;
         }
 
         const action = new MoveAction(this.game.tick, dx, dy);
-        action.invoke(this.game);
+        //action.invoke(this.game);
         this.game.actionBuffer.push(action);
     };
 }

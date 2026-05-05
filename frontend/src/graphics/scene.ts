@@ -1,6 +1,7 @@
-import { compact, simpleFrag, simpleVert } from '../generated/shaders';
+import { compact, simpleFrag, simpleVert, test } from '../generated/shaders';
 import { Camera } from './camera';
 import { InstanceBuffer } from './InstanceBuffer';
+import type { DirectionalLight, LightSource } from './lightSource';
 import { Vec3 } from './math/vec';
 import type { Model } from './model';
 import { WebGPUDriver } from './webGpuDriver';
@@ -19,6 +20,17 @@ export class Scene {
     private vpBuffer!: GPUBuffer;
     private vpBindGroup!: GPUBindGroup;
 
+    private lightBuffer!: GPUBuffer;
+
+    private pointLights: LightSource[] = [];
+
+    private static readonly MAX_DIRECTIONAL_LIGHTS = 4;
+    private directionalLightSlots: (DirectionalLight | null)[] = new Array(
+        Scene.MAX_DIRECTIONAL_LIGHTS,
+    ).fill(null);
+
+    private directionalLightBuffer!: GPUBuffer;
+
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
         this.models = [];
@@ -27,7 +39,7 @@ export class Scene {
     public init(driver: WebGPUDriver, w: number, h: number) {
         this.inited = true;
         const format = driver.format;
-        const shaderCode = simpleVert + '\n' + simpleFrag;
+        const shaderCode = test;
 
         this.cubeInstanceBuffer = new InstanceBuffer(driver.device, 10000);
 
@@ -43,11 +55,16 @@ export class Scene {
                 entryPoint: 'vs_main',
                 buffers: [
                     {
-                        arrayStride: 12,
+                        arrayStride: 24,
                         attributes: [
                             {
                                 shaderLocation: 0,
                                 offset: 0,
+                                format: 'float32x3',
+                            },
+                            {
+                                shaderLocation: 5,
+                                offset: 12,
                                 format: 'float32x3',
                             },
                         ],
@@ -109,10 +126,18 @@ export class Scene {
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
+        this.directionalLightBuffer = driver.makeBuffer(
+            32 * Scene.MAX_DIRECTIONAL_LIGHTS,
+            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        );
+
         this.vpBuffer = driver.makeBuffer(64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
         this.vpBindGroup = driver.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
-            entries: [{ binding: 0, resource: { buffer: this.vpBuffer } }],
+            entries: [
+                { binding: 0, resource: { buffer: this.vpBuffer } },
+                { binding: 1, resource: { buffer: this.directionalLightBuffer } },
+            ],
         });
 
         this.initCompactPipeline(driver);
@@ -249,5 +274,30 @@ export class Scene {
         }
         model.translate(offset);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+    }
+
+    public addDirectionalLight(driver: WebGPUDriver, light: DirectionalLight) {
+        const slot = this.directionalLightSlots.findIndex((s) => s === null);
+        if (slot === -1) throw new Error('Max directional lights reached');
+        this.directionalLightSlots[slot] = light;
+        light.slot = slot;
+        this.updateDirectionalLight(driver, light);
+    }
+
+    public updateDirectionalLight(driver: WebGPUDriver, light: DirectionalLight) {
+        driver.device.queue.writeBuffer(
+            this.directionalLightBuffer,
+            light.slot * 32, // 32 bytes per light
+            light.toFloat32Array(),
+        );
+    }
+
+    public removeDirectionalLight(driver: WebGPUDriver, light: DirectionalLight) {
+        this.directionalLightSlots[light.slot] = null;
+        driver.device.queue.writeBuffer(
+            this.directionalLightBuffer,
+            light.slot * 32,
+            new Float32Array(8),
+        );
     }
 }
