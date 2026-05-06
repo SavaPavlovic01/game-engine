@@ -7,6 +7,8 @@ export interface LightData {
 
 export interface LightSource {
     getLightData(): LightData;
+    toFloat32Array(): Float32Array;
+    lightSlot: number;
 }
 
 export function isLightSource(obj: unknown): obj is LightSource {
@@ -14,7 +16,7 @@ export function isLightSource(obj: unknown): obj is LightSource {
 }
 
 export class DirectionalLight implements LightSource {
-    public slot!: number;
+    public lightSlot!: number;
 
     constructor(
         public direction: Vec3,

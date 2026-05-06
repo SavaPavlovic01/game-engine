@@ -20,16 +20,18 @@ export class Scene {
     private vpBuffer!: GPUBuffer;
     private vpBindGroup!: GPUBindGroup;
 
-    private lightBuffer!: GPUBuffer;
-
-    private pointLights: LightSource[] = [];
-
     private static readonly MAX_DIRECTIONAL_LIGHTS = 4;
     private directionalLightSlots: (DirectionalLight | null)[] = new Array(
         Scene.MAX_DIRECTIONAL_LIGHTS,
     ).fill(null);
 
     private directionalLightBuffer!: GPUBuffer;
+
+    private static readonly MAX_POINT_LIGHTS = 16;
+    private pointLightSlots: ((Model & LightSource) | null)[] = new Array(
+        Scene.MAX_POINT_LIGHTS,
+    ).fill(null);
+    private pointLightBuffer!: GPUBuffer;
 
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
@@ -131,12 +133,18 @@ export class Scene {
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         );
 
+        this.pointLightBuffer = driver.makeBuffer(
+            32 * Scene.MAX_POINT_LIGHTS,
+            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        );
+
         this.vpBuffer = driver.makeBuffer(64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
         this.vpBindGroup = driver.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
             entries: [
                 { binding: 0, resource: { buffer: this.vpBuffer } },
                 { binding: 1, resource: { buffer: this.directionalLightBuffer } },
+                { binding: 2, resource: { buffer: this.pointLightBuffer } },
             ],
         });
 
@@ -280,23 +288,50 @@ export class Scene {
         const slot = this.directionalLightSlots.findIndex((s) => s === null);
         if (slot === -1) throw new Error('Max directional lights reached');
         this.directionalLightSlots[slot] = light;
-        light.slot = slot;
+        light.lightSlot = slot;
         this.updateDirectionalLight(driver, light);
     }
 
     public updateDirectionalLight(driver: WebGPUDriver, light: DirectionalLight) {
         driver.device.queue.writeBuffer(
             this.directionalLightBuffer,
-            light.slot * 32, // 32 bytes per light
+            light.lightSlot * 32,
             light.toFloat32Array(),
         );
     }
 
     public removeDirectionalLight(driver: WebGPUDriver, light: DirectionalLight) {
-        this.directionalLightSlots[light.slot] = null;
+        this.directionalLightSlots[light.lightSlot] = null;
         driver.device.queue.writeBuffer(
             this.directionalLightBuffer,
-            light.slot * 32,
+            light.lightSlot * 32,
+            new Float32Array(8),
+        );
+    }
+
+    public addPointLight(driver: WebGPUDriver, light: Model & LightSource) {
+        this.addObject(driver, light);
+        const slot = this.pointLightSlots.findIndex((s) => s === null);
+        if (slot === -1) throw new Error('Max point lights reached');
+        this.pointLightSlots[slot] = light;
+        light.lightSlot = slot;
+        this.updatePointLight(driver, light);
+    }
+
+    public updatePointLight(driver: WebGPUDriver, light: Model & LightSource) {
+        driver.device.queue.writeBuffer(
+            this.pointLightBuffer,
+            light.lightSlot * 32,
+            light.toFloat32Array(),
+        );
+    }
+
+    public removePointLight(driver: WebGPUDriver, light: Model & LightSource) {
+        this.pointLightSlots[light.lightSlot] = null;
+        this.removeObject(driver, light.slot!);
+        driver.device.queue.writeBuffer(
+            this.pointLightBuffer,
+            light.lightSlot * 32,
             new Float32Array(8),
         );
     }

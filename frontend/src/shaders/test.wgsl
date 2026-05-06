@@ -9,6 +9,13 @@ struct DirectionalLight {
     intensity: f32,
 };
 
+struct PointLight {
+    position: vec3<f32>,
+    radius: f32,
+    color: vec3<f32>,
+    intensity: f32,
+};
+
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(5) normal: vec3<f32>,
@@ -25,7 +32,8 @@ struct VertexOutput {
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-@group(0) @binding(1) var<uniform> lights: array<DirectionalLight, 4>;
+@group(0) @binding(1) var<uniform> directionalLights: array<DirectionalLight, 4>;
+@group(0) @binding(2) var<uniform> pointLights: array<PointLight, 16>;
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
@@ -40,24 +48,32 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let baseColor = vec3<f32>(
-        1,
-        1,
-        1,
-    );
+    let baseColor = vec3<f32>(0.8, 0.8, 0.8);
+    let normal = normalize(input.worldNormal);
 
     let ambient = 0.15;
-    var diffuse = vec3<f32>(0.0, 0.0, 0.0);
+    var diffuse = vec3<f32>(0.0);
 
     for (var i = 0u; i < 4u; i++) {
-        let light = lights[i];
-        let contribution = max(
-            dot(input.worldNormal, normalize(-light.direction)),
-            0.0
-        ) * light.intensity;
+        let light = directionalLights[i];
+        let contribution = max(dot(normal, normalize(-light.direction)), 0.0) * light.intensity;
         diffuse += light.color * contribution;
     }
 
+    for (var i = 0u; i < 16u; i++) {
+        let light = pointLights[i];
+        let toLight = light.position - input.worldPos;
+        let dist = length(toLight);
+
+        if dist > light.radius { continue; }
+
+        let attenuation = 1.0 - (dist / light.radius);
+
+        let contribution = max(dot(normal, normalize(toLight)), 0.0) 
+            * light.intensity 
+            * attenuation;
+        diffuse += light.color * contribution;
+    }
 
     return vec4<f32>(baseColor * (ambient + diffuse), 1.0);
 }
