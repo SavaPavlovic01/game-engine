@@ -29,16 +29,24 @@ window.onload = async () => {
     const startGameButton = document.getElementById('startGame') as HTMLButtonElement;
     startGameButton.onclick = () => inputHandler.startGame();
 
+    const cube = new Cube();
+
     const light = new LightCube();
     const dirLight = new DirectionalLight(new Vec3(0, 0, -1), new Vec3(1, 1, 1));
     game.gameState.scene.addPointLight(game.graphics.driver, light);
-    game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
+    game.gameState.scene.addObject(game.graphics.driver, cube);
+    //game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
 
     setInterval(() => {
         function update() {
             angle += 0.01;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
+            light.lightColor = new Vec3(
+                Math.max(Math.cos(angle), 0),
+                Math.max(Math.sin(angle), 0),
+                Math.max(1 - Math.sin(angle), 0),
+            );
             game.gameState.scene.setObjectTranslate(game.graphics.driver, light, new Vec3(x, 0, z));
             game.gameState.scene.updatePointLight(game.graphics.driver, light);
         }
