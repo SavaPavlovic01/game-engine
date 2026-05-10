@@ -53,9 +53,10 @@ export class InputHandler {
         console.log('hellos');
         let dx = 0;
         let dy = 0;
+        const cameraForward = this.game.gameState.scene.camera.getForwardVector();
         switch (ev.key) {
             case 'w':
-                this.game.gameState.scene.camera.translate(new Vec3(0, 0, -1));
+                this.game.gameState.scene.camera.translate(cameraForward);
                 dx = 1;
                 dy = 0;
                 break;
@@ -65,7 +66,7 @@ export class InputHandler {
                 dy = 1;
                 break;
             case 's':
-                this.game.gameState.scene.camera.translate(new Vec3(0, 0, 1));
+                this.game.gameState.scene.camera.translate(cameraForward.negate());
                 dx = -1;
                 dy = 0;
                 break;
@@ -85,7 +86,7 @@ export class InputHandler {
         }
 
         const action = new MoveAction(this.game.tick, dx, dy);
-        //action.invoke(this.game);
+        action.invoke(this.game);
         this.game.actionBuffer.push(action);
     };
 }

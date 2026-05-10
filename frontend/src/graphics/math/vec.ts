@@ -17,6 +17,18 @@ export class Vec3 {
         return this.values[2]!;
     }
 
+    get X() {
+        return this.values[0]!;
+    }
+
+    get Y() {
+        return this.values[1]!;
+    }
+
+    get Z() {
+        return this.values[2]!;
+    }
+
     public add(other: Vec3): Vec3 {
         return new Vec3(
             this.index(0) + other.index(0),
@@ -60,5 +72,9 @@ export class Vec3 {
         const y = this.index(2) * other.index(0) - this.index(0) * other.index(2);
         const z = this.index(0) * other.index(1) - this.index(1) * other.index(0);
         return new Vec3(x, y, z);
+    }
+
+    public negate(): Vec3 {
+        return new Vec3(-this.X, -this.Y, -this.Z);
     }
 }

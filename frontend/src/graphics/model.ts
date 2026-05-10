@@ -1,7 +1,7 @@
 import { simpleFrag, simpleVert } from '../generated/shaders';
 import type { Camera } from './camera';
 import { Mat4 } from './math/mat';
-import type { Vec3 } from './math/vec';
+import { Vec3 } from './math/vec';
 import type { WebGPUDriver } from './webGpuDriver';
 
 export abstract class Model {
@@ -81,6 +81,30 @@ export abstract class Model {
             });
         }
         return this.bindGroup;
+    }
+
+    get forward() {
+        return new Vec3(
+            this.modelMatrix.values[8]!,
+            this.modelMatrix.values[9]!,
+            this.modelMatrix.values[10]!,
+        ).normalize();
+    }
+
+    get right() {
+        return new Vec3(
+            this.modelMatrix.values[0]!,
+            this.modelMatrix.values[1]!,
+            this.modelMatrix.values[2]!,
+        ).normalize();
+    }
+
+    get up() {
+        return new Vec3(
+            this.modelMatrix.values[4]!,
+            this.modelMatrix.values[5]!,
+            this.modelMatrix.values[6]!,
+        ).normalize();
     }
 
     private buildModelMatrix(): Mat4 {

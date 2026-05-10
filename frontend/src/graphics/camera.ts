@@ -33,7 +33,7 @@ export class Camera {
         this.projectionMatrix = this.buildProjectionMatrix();
     }
 
-    private getForwardVector(): Vec3 {
+    public getForwardVector(): Vec3 {
         const pitch = this.rotation.x();
         const yaw = this.rotation.y();
 
