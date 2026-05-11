@@ -37,6 +37,13 @@ export class Vec3 {
         );
     }
 
+    public zeroIndex(index: number): Vec3 {
+        if (index < 0 || index >= 3) throw new Error('out of bounds when you tried to zero vector');
+        const v = new Vec3(this.X, this.Y, this.Z);
+        v.values[index] = 0;
+        return v;
+    }
+
     public sub(other: Vec3): Vec3 {
         return new Vec3(
             this.index(0) - other.index(0),

@@ -99,4 +99,8 @@ export class Game {
 
         this.dataChannel.channel.send(JSON.stringify(moveActionMsg));
     }
+
+    public rotatePlayer(dirX: number, dirY: number) {
+        this.gameState.setPlayerRotate(this.playerId!, new Vec3(dirX, dirY, 0));
+    }
 }

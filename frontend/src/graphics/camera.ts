@@ -44,6 +44,13 @@ export class Camera {
         return new Vec3(x, y, z).normalize();
     }
 
+    public getRightVector(): Vec3 {
+        const forward = this.getForwardVector();
+        const worldUp = new Vec3(0, 1, 0);
+
+        return forward.cross(worldUp).normalize();
+    }
+
     public translate(trans: Vec3) {
         this.position = this.position.add(trans);
         this.viewMatrix = this.buildViewMatrix();

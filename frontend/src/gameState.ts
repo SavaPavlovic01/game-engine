@@ -47,4 +47,14 @@ export class GameState {
 
         this.scene.offsetObject(this.graphics.driver, player, offset);
     }
+
+    public setPlayerRotate(playerId: string, rotate: Vec3) {
+        const player = this.players.get(playerId);
+        if (!player) {
+            console.log(`player with id = ${playerId} does not exist`);
+            return;
+        }
+
+        this.scene.setObjectRotate(this.graphics.driver, player, rotate);
+    }
 }

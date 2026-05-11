@@ -9,6 +9,7 @@ export class InputHandler {
     constructor(game: Game) {
         this.game = game;
         window.onkeydown = this.onKeydown;
+        window.onmousemove = this.onMouseMove;
     }
 
     public makeLobby() {
@@ -53,7 +54,8 @@ export class InputHandler {
         console.log('hellos');
         let dx = 0;
         let dy = 0;
-        const cameraForward = this.game.gameState.scene.camera.getForwardVector();
+        const cameraForward = this.game.gameState.scene.camera.getForwardVector().zeroIndex(1);
+        const rightVector = this.game.gameState.scene.camera.getRightVector().zeroIndex(1);
         switch (ev.key) {
             case 'w':
                 this.game.gameState.scene.camera.translate(cameraForward);
@@ -61,7 +63,7 @@ export class InputHandler {
                 dy = 0;
                 break;
             case 'a':
-                this.game.gameState.scene.camera.translate(new Vec3(-1, 0, 0));
+                this.game.gameState.scene.camera.translate(rightVector.negate());
                 dx = 0;
                 dy = 1;
                 break;
@@ -71,15 +73,15 @@ export class InputHandler {
                 dy = 0;
                 break;
             case 'd':
-                this.game.gameState.scene.camera.translate(new Vec3(1, 0, 0));
+                this.game.gameState.scene.camera.translate(rightVector);
                 dx = 0;
                 dy = -1;
                 break;
             case 'e':
-                this.game.gameState.scene.camera.rotate(new Vec3(0, 0.1, 0));
+                this.game.gameState.scene.camera.rotate(new Vec3(0.1, 0.1, 0));
                 break;
             case 'q':
-                this.game.gameState.scene.camera.rotate(new Vec3(0, -0.1, 0));
+                this.game.gameState.scene.camera.rotate(new Vec3(0, -0.1, 0.5));
                 break;
             default:
                 return;
@@ -88,5 +90,13 @@ export class InputHandler {
         const action = new MoveAction(this.game.tick, dx, dy);
         action.invoke(this.game);
         this.game.actionBuffer.push(action);
+    };
+
+    // TODO: keep rotating when mouse is at the edges
+    public onMouseMove = (ev: MouseEvent) => {
+        const sens = 0.005;
+        const dx = ev.movementX;
+        const dy = ev.movementY;
+        this.game.gameState.scene.camera.rotate(new Vec3(-dy * sens, dx * sens, 0));
     };
 }

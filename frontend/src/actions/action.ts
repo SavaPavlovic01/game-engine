@@ -45,3 +45,22 @@ export class MoveAction extends Action {
         };
     }
 }
+
+export class RotationAction extends Action {
+    constructor(
+        tick: number,
+        private dx: number,
+        private dy: number,
+    ) {
+        super(tick);
+    }
+
+    public invoke(game: Game): void {
+        game.rotatePlayer(this.dx, this.dy);
+    }
+
+    // TODO: i think that we dont need this, since we dont predict rotation idk
+    public simulate(state: SimulationState): SimulationState {
+        return state;
+    }
+}

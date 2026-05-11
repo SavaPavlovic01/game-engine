@@ -123,6 +123,11 @@ export abstract class Model {
         this.modelMatrix = this.buildModelMatrix();
     }
 
+    public setRotate(rot: Vec3) {
+        this.rotation = rot;
+        this.modelMatrix = this.buildModelMatrix();
+    }
+
     public rotate(dir: Vec3) {
         this.rotation = this.rotation.add(dir);
         this.modelMatrix = this.buildModelMatrix();

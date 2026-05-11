@@ -275,6 +275,15 @@ export class Scene {
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
     }
 
+    public setObjectRotate(driver: WebGPUDriver, model: Model, rot: Vec3) {
+        if (model.slot === undefined) {
+            console.log('slot not set');
+            return;
+        }
+        model.setRotate(rot);
+        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+    }
+
     public offsetObject(driver: WebGPUDriver, model: Model, offset: Vec3) {
         if (model.slot === undefined) {
             console.log('slot not set');
