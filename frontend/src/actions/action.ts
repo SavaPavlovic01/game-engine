@@ -56,7 +56,7 @@ export class RotationAction extends Action {
     }
 
     public invoke(game: Game): void {
-        game.rotatePlayer(this.dx, this.dy);
+        game.setPlayerRotate(this.dx, this.dy);
     }
 
     // TODO: i think that we dont need this, since we dont predict rotation idk

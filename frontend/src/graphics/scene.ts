@@ -254,14 +254,9 @@ export class Scene {
         this.cubeInstanceBuffer.remove(driver, slot);
     }
 
-    public rotateObject(
-        driver: WebGPUDriver,
-        modelSlot: number,
-        rot: Vec3 = new Vec3(0.1, 0.1, 0.1),
-    ) {
-        if (this.models.length <= modelSlot) return;
-        const model = this.models[modelSlot]!;
+    public rotateObject(driver: WebGPUDriver, model: Model, rot: Vec3 = new Vec3(0.1, 0.1, 0.1)) {
         if (model.slot === undefined) return;
+        if (this.models.length <= model.slot) return;
         model.rotate(rot);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
     }
