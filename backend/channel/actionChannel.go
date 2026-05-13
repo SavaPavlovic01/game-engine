@@ -17,6 +17,7 @@ func (ac ActionChannel) SendText(msg string) error {
 	return ac.dc.SendText(msg)
 }
 
+// TODO: clean
 func (ac ActionChannel) handleMessage(actionType game.ActionType, msg []byte) error {
 	switch actionType {
 	case game.MOVE:
@@ -26,6 +27,13 @@ func (ac ActionChannel) handleMessage(actionType game.ActionType, msg []byte) er
 			return err
 		}
 		ac.actionChannel <- move
+	case game.ROTATION:
+		var rotation game.RotationAction
+		if err := json.Unmarshal(msg, &rotation); err != nil {
+			fmt.Printf("%v", err)
+			return err
+		}
+		ac.actionChannel <- rotation
 	}
 
 	return nil

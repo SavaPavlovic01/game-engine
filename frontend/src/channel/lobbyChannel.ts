@@ -116,6 +116,7 @@ export class LobbyChannel {
         console.log('opening data channel');
         const channel = await GameStateChannel.create(this.game);
         this.game.setGameStateChannel(channel);
+        this.game.gameStarted = true;
 
         alert('game started');
     };

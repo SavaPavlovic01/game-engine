@@ -34,6 +34,8 @@ export class Game {
 
     public actionBuffer: ActionBuffer = new ActionBuffer();
 
+    public gameStarted: boolean = false;
+
     constructor() {}
 
     public static async create() {
@@ -106,5 +108,19 @@ export class Game {
 
     public rotatePlayer(dirX: number, dirY: number) {
         this.gameState.rotatePlayer(this.playerId!, new Vec3(dirX, dirY, 0));
+
+        // TODO: move this shit out to the action, when we invoke it send the message
+        const rot = this.gameState.players.get(this.playerId!)?.rotation;
+
+        const rotatePlayerMsg = {
+            playerId: this.playerId,
+            actionType: 1,
+            tick: this.tick,
+            xrot: rot?.X,
+            yrot: rot?.Y,
+        };
+        console.log('sending this', rotatePlayerMsg);
+
+        this.dataChannel?.channel.send(JSON.stringify(rotatePlayerMsg));
     }
 }

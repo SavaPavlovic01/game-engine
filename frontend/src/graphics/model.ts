@@ -6,7 +6,7 @@ import type { WebGPUDriver } from './webGpuDriver';
 
 export abstract class Model {
     public translation: Vec3;
-    private rotation: Vec3;
+    public rotation: Vec3;
     private scale: Vec3;
 
     protected verticies: Float32Array;

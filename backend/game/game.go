@@ -17,6 +17,8 @@ type PlayerState struct {
 	PlayerId string  `json:"playerId"`
 	X        float32 `json:"x"`
 	Y        float32 `json:"y"`
+	XRot     float32 `json:"xrot"`
+	YRot     float32 `json:"yrot"`
 }
 
 type GameState struct {

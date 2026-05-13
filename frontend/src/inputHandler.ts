@@ -94,9 +94,11 @@ export class InputHandler {
 
     // TODO: keep rotating when mouse is at the edges
     public onMouseMove = (ev: MouseEvent) => {
+        if (!this.game.gameStarted) return;
         const sens = 0.005;
         const dx = ev.movementX;
         const dy = ev.movementY;
-        this.game.gameState.scene.camera.rotate(new Vec3(-dy * sens, dx * sens, 0));
+        this.game.rotatePlayer(-dy * sens, dx * sens);
+        //this.game.gameState.scene.camera.rotate(new Vec3(-dy * sens, dx * sens, 0));
     };
 }

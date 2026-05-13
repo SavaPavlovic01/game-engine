@@ -30,6 +30,8 @@ export class GameStateChannel {
                 playerId: string;
                 x: number;
                 y: number;
+                xrot: number;
+                yrot: number;
             };
 
             type GameState = {
@@ -43,6 +45,10 @@ export class GameStateChannel {
             for (const [playerId, player] of Object.entries(data.players)) {
                 if (playerId != this.game.playerId) {
                     this.game.gameState.movePlayer(playerId, new Vec3(-player.y, 0, -player.x));
+                    this.game.gameState.setPlayerRotate(
+                        playerId,
+                        new Vec3(player.xrot, player.yrot, 0),
+                    );
                 } else {
                     this.game.actionBuffer.discardUpTo(data.tick);
                     const state = this.game.actionBuffer.replay({ x: player.x, y: player.y });
