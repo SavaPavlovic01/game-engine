@@ -94,7 +94,7 @@ export class InputHandler {
 
     // TODO: keep rotating when mouse is at the edges
     public onMouseMove = (ev: MouseEvent) => {
-        if (!this.game.gameStarted) return;
+        //if (!this.game.gameStarted) return;
         const sens = 0.005;
         const dx = ev.movementX;
         const dy = ev.movementY;

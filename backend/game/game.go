@@ -4,6 +4,7 @@ import (
 	"cs/lobby"
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -19,6 +20,13 @@ type PlayerState struct {
 	Y        float32 `json:"y"`
 	XRot     float32 `json:"xrot"`
 	YRot     float32 `json:"yrot"`
+}
+
+func (ps *PlayerState) GetForwardVector() (float64, float64, float64) {
+	x := math.Sin(float64(ps.YRot)) * math.Cos(float64(ps.XRot))
+	y := math.Sin(float64(ps.XRot))
+	z := -math.Cos(float64(ps.YRot)) * math.Cos(float64(ps.XRot))
+	return x, y, z
 }
 
 type GameState struct {
