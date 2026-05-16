@@ -1,4 +1,4 @@
-import type { AABB } from '../colilsion/ray';
+import type { AABB } from '../collision/ray';
 import { Vec3 } from '../math/vec';
 import { Model } from '../model';
 

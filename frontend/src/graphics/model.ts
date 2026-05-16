@@ -1,6 +1,6 @@
 import { simpleFrag, simpleVert } from '../generated/shaders';
 import type { Camera } from './camera';
-import type { AABB } from './colilsion/ray';
+import type { AABB } from './collision/ray';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import type { WebGPUDriver } from './webGpuDriver';

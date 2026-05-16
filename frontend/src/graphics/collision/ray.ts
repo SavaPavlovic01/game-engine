@@ -5,6 +5,14 @@ export interface AABB {
     max: Vec3;
 }
 
+export function aabbOverlapsAABB(a: AABB, b: AABB): boolean {
+    for (let i = 0; i < 3; i++) {
+        if (a.max.index(i) < b.min.index(i)) return false;
+        if (a.min.index(i) > b.max.index(i)) return false;
+    }
+    return true;
+}
+
 export class Ray {
     public origin: Vec3;
     public direction: Vec3;

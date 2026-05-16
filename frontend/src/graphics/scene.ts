@@ -1,5 +1,7 @@
 import { compact, simpleFrag, simpleVert, test } from '../generated/shaders';
 import { Camera } from './camera';
+import { BVHInterceptor, type HitResult } from './collision/BVHInterceptor';
+import type { Interceptor } from './collision/interceptor';
 import { InstanceBuffer } from './InstanceBuffer';
 import type { DirectionalLight, LightSource } from './lightSource';
 import { Vec3 } from './math/vec';
@@ -32,6 +34,8 @@ export class Scene {
         Scene.MAX_POINT_LIGHTS,
     ).fill(null);
     private pointLightBuffer!: GPUBuffer;
+
+    public interceptor: Interceptor = new BVHInterceptor();
 
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
@@ -248,10 +252,16 @@ export class Scene {
     public addObject(driver: WebGPUDriver, model: Model) {
         model.slot = this.cubeInstanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
         this.models[model.slot] = model;
+        this.interceptor.update(this.models);
     }
 
     public removeObject(driver: WebGPUDriver, slot: number) {
         this.cubeInstanceBuffer.remove(driver, slot);
+        this.interceptor.update(this.models);
+    }
+
+    public shoot(): HitResult | null {
+        return this.interceptor.hitFirst(this.camera.shootRay());
     }
 
     public rotateObject(driver: WebGPUDriver, model: Model, rot: Vec3 = new Vec3(0.1, 0.1, 0.1)) {
@@ -259,6 +269,7 @@ export class Scene {
         if (this.models.length <= model.slot) return;
         model.rotate(rot);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+        this.interceptor.update(this.models);
     }
 
     public setObjectTranslate(driver: WebGPUDriver, model: Model, position: Vec3) {
@@ -268,6 +279,7 @@ export class Scene {
         }
         model.setTranslate(position);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+        this.interceptor.update(this.models);
     }
 
     public setObjectRotate(driver: WebGPUDriver, model: Model, rot: Vec3) {
@@ -277,6 +289,7 @@ export class Scene {
         }
         model.setRotate(rot);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+        this.interceptor.update(this.models);
     }
 
     public offsetObject(driver: WebGPUDriver, model: Model, offset: Vec3) {
@@ -286,6 +299,7 @@ export class Scene {
         }
         model.translate(offset);
         this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+        this.interceptor.update(this.models);
     }
 
     public addDirectionalLight(driver: WebGPUDriver, light: DirectionalLight) {

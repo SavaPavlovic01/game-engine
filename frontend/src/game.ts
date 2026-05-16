@@ -119,7 +119,7 @@ export class Game {
             xrot: rot?.X,
             yrot: rot?.Y,
         };
-        console.log('sending this', rotatePlayerMsg);
+        //console.log('sending this', rotatePlayerMsg);
 
         this.dataChannel?.channel.send(JSON.stringify(rotatePlayerMsg));
     }

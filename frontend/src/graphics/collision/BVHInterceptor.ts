@@ -1,9 +1,9 @@
 import { Vec3 } from '../math/vec';
 import type { Model } from '../model';
 import type { Interceptor } from './interceptor';
-import { Ray } from './ray';
+import { aabbOverlapsAABB, Ray } from './ray';
 
-interface HitResult {
+export interface HitResult {
     model: Model;
     distance: number;
 }
@@ -23,7 +23,7 @@ class BVHNode {
     }
 }
 
-class BVHInterceptor implements Interceptor {
+export class BVHInterceptor implements Interceptor {
     private root: BVHNode | null = null;
 
     public update(models: Model[]): void {
@@ -137,5 +137,32 @@ class BVHInterceptor implements Interceptor {
         if (dx > dy && dx > dz) return 0;
         if (dy > dz) return 1;
         return 2;
+    }
+
+    public overlapping(model: Model): Model[] {
+        const worldAABB = model.getWorldAABB();
+        const results: Model[] = [];
+        this.traverseOverlap(this.root, model, worldAABB, results);
+        return results;
+    }
+
+    private traverseOverlap(
+        node: BVHNode | null,
+        self: Model,
+        aabb: { min: Vec3; max: Vec3 },
+        results: Model[],
+    ): void {
+        if (node === null) return;
+        if (!aabbOverlapsAABB(aabb, node.aabb)) return;
+
+        if (node.isLeaf()) {
+            if (node.model !== self) {
+                results.push(node.model!);
+            }
+            return;
+        }
+
+        this.traverseOverlap(node.left, self, aabb, results);
+        this.traverseOverlap(node.right, self, aabb, results);
     }
 }

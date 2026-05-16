@@ -10,6 +10,7 @@ export class InputHandler {
         this.game = game;
         window.onkeydown = this.onKeydown;
         window.onmousemove = this.onMouseMove;
+        window.onmousedown = this.onMouseClick;
     }
 
     public makeLobby() {
@@ -99,6 +100,11 @@ export class InputHandler {
         const dx = ev.movementX;
         const dy = ev.movementY;
         this.game.rotatePlayer(-dy * sens, dx * sens);
-        //this.game.gameState.scene.camera.rotate(new Vec3(-dy * sens, dx * sens, 0));
+        this.game.gameState.scene.camera.rotate(new Vec3(-dy * sens, dx * sens, 0));
+    };
+
+    public onMouseClick = (ev: MouseEvent) => {
+        const hit = this.game.gameState.scene.shoot();
+        console.log(hit);
     };
 }

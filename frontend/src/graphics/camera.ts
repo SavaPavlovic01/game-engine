@@ -1,4 +1,4 @@
-import { Ray } from './colilsion/ray';
+import { Ray } from './collision/ray';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import { Model } from './model';
