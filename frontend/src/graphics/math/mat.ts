@@ -1,4 +1,4 @@
-import type { Vec3 } from './vec';
+import { Vec3 } from './vec';
 
 export class Mat4 {
     public values: Float32Array;
@@ -138,6 +138,84 @@ export class Mat4 {
                 -1,
                 0,
             ]),
+        );
+    }
+
+    public invertTRS(): Mat4 {
+        const m = this.values;
+
+        const sx = Math.sqrt(m[0]! * m[0]! + m[1]! * m[1]! + m[2]! * m[2]!);
+        const sy = Math.sqrt(m[4]! * m[4]! + m[5]! * m[5]! + m[6]! * m[6]!);
+        const sz = Math.sqrt(m[8]! * m[8]! + m[9]! * m[9]! + m[10]! * m[10]!);
+
+        const isx = 1 / sx,
+            isy = 1 / sy,
+            isz = 1 / sz;
+
+        const r00 = m[0]! * isx,
+            r01 = m[1]! * isx,
+            r02 = m[2]! * isx;
+        const r10 = m[4]! * isy,
+            r11 = m[5]! * isy,
+            r12 = m[6]! * isy;
+        const r20 = m[8]! * isz,
+            r21 = m[9]! * isz,
+            r22 = m[10]! * isz;
+
+        const tx = m[3]!,
+            ty = m[7]!,
+            tz = m[11]!;
+
+        const ir00 = r00 * isx,
+            ir01 = r10 * isx,
+            ir02 = r20 * isx;
+        const ir10 = r01 * isy,
+            ir11 = r11 * isy,
+            ir12 = r21 * isy;
+        const ir20 = r02 * isz,
+            ir21 = r12 * isz,
+            ir22 = r22 * isz;
+
+        const itx = -(ir00 * tx + ir01 * ty + ir02 * tz);
+        const ity = -(ir10 * tx + ir11 * ty + ir12 * tz);
+        const itz = -(ir20 * tx + ir21 * ty + ir22 * tz);
+
+        return new Mat4([
+            ir00,
+            ir01,
+            ir02,
+            itx,
+            ir10,
+            ir11,
+            ir12,
+            ity,
+            ir20,
+            ir21,
+            ir22,
+            itz,
+            0,
+            0,
+            0,
+            1,
+        ]);
+    }
+
+    public transformPoint(v: Vec3): Vec3 {
+        const m = this.values;
+        return new Vec3(
+            m[0]! * v.x() + m[1]! * v.y() + m[2]! * v.z() + m[3]!,
+            m[4]! * v.x() + m[5]! * v.y() + m[6]! * v.z() + m[7]!,
+            m[8]! * v.x() + m[9]! * v.y() + m[10]! * v.z() + m[11]!,
+        );
+    }
+
+    // direction ignores translation
+    public transformDir(v: Vec3): Vec3 {
+        const m = this.values;
+        return new Vec3(
+            m[0]! * v.x() + m[1]! * v.y() + m[2]! * v.z(),
+            m[4]! * v.x() + m[5]! * v.y() + m[6]! * v.z(),
+            m[8]! * v.x() + m[9]! * v.y() + m[10]! * v.z(),
         );
     }
 }

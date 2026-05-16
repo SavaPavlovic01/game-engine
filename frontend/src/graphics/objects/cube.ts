@@ -1,3 +1,4 @@
+import type { AABB } from '../colilsion/ray';
 import { Vec3 } from '../math/vec';
 import { Model } from '../model';
 
@@ -50,5 +51,16 @@ export class Cube extends Model {
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
         super(translate, rotate, scale, Cube.cubeVertices, Cube.indices);
+    }
+
+    public get center(): Vec3 {
+        return this.translation;
+    }
+
+    public getLocalAABB(): AABB {
+        return {
+            min: new Vec3(-0.5, -0.5, -0.5),
+            max: new Vec3(0.5, 0.5, 0.5),
+        };
     }
 }

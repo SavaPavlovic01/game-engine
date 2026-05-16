@@ -1,3 +1,4 @@
+import { Ray } from './colilsion/ray';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import { Model } from './model';
@@ -42,6 +43,10 @@ export class Camera {
         const z = -Math.cos(yaw) * Math.cos(pitch);
 
         return new Vec3(x, y, z).normalize();
+    }
+
+    public shootRay(): Ray {
+        return new Ray(this.position, this.getForwardVector());
     }
 
     public getRightVector(): Vec3 {

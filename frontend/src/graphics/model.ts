@@ -1,5 +1,6 @@
 import { simpleFrag, simpleVert } from '../generated/shaders';
 import type { Camera } from './camera';
+import type { AABB } from './colilsion/ray';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import type { WebGPUDriver } from './webGpuDriver';
@@ -105,6 +106,31 @@ export abstract class Model {
             this.modelMatrix.values[5]!,
             this.modelMatrix.values[6]!,
         ).normalize();
+    }
+
+    abstract get center(): Vec3;
+
+    abstract getLocalAABB(): AABB;
+
+    public getWorldAABB(): AABB {
+        const local = this.getLocalAABB();
+        const m = this.modelMatrix.values;
+
+        const he = [
+            (local.max.X - local.min.X) / 2,
+            (local.max.Y - local.min.Y) / 2,
+            (local.max.Z - local.min.Z) / 2,
+        ];
+
+        const whx = Math.abs(m[0]!) * he[0]! + Math.abs(m[4]!) * he[1]! + Math.abs(m[8]!) * he[2]!;
+        const why = Math.abs(m[1]!) * he[0]! + Math.abs(m[5]!) * he[1]! + Math.abs(m[9]!) * he[2]!;
+        const whz = Math.abs(m[2]!) * he[0]! + Math.abs(m[6]!) * he[1]! + Math.abs(m[10]!) * he[2]!;
+
+        const c = this.center;
+        return {
+            min: new Vec3(c.X - whx, c.Y - why, c.Z - whz),
+            max: new Vec3(c.X + whx, c.Y + why, c.Z + whz),
+        };
     }
 
     private buildModelMatrix(): Mat4 {
