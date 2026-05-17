@@ -47,7 +47,7 @@ export class Scene {
         const format = driver.format;
         const shaderCode = test;
 
-        this.cubeInstanceBuffer = new InstanceBuffer(driver.device, 10000);
+        this.cubeInstanceBuffer = new InstanceBuffer(driver, 10000);
 
         const shaderModule = driver.device.createShaderModule({
             code: shaderCode,
@@ -151,47 +151,6 @@ export class Scene {
                 { binding: 2, resource: { buffer: this.pointLightBuffer } },
             ],
         });
-
-        this.initCompactPipeline(driver);
-    }
-
-    private cleanBuffer!: GPUBuffer;
-    private drawArgsBuffer!: GPUBuffer;
-    private compactPipeline!: GPUComputePipeline;
-    private compactBindGroup!: GPUBindGroup;
-
-    private initCompactPipeline(driver: WebGPUDriver) {
-        this.cleanBuffer = driver.device.createBuffer({
-            size: 64 * this.cubeInstanceBuffer.capacity,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE,
-        });
-
-        this.drawArgsBuffer = driver.device.createBuffer({
-            size: 5 * 4,
-            usage:
-                GPUBufferUsage.INDIRECT |
-                GPUBufferUsage.STORAGE |
-                GPUBufferUsage.COPY_DST |
-                GPUBufferUsage.COPY_SRC,
-        });
-
-        const compactShader = driver.device.createShaderModule({ code: compact });
-        this.compactPipeline = driver.device.createComputePipeline({
-            layout: 'auto',
-            compute: {
-                module: compactShader,
-                entryPoint: 'main',
-            },
-        });
-
-        this.compactBindGroup = driver.device.createBindGroup({
-            layout: this.compactPipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: this.cubeInstanceBuffer.buffer } },
-                { binding: 1, resource: { buffer: this.cleanBuffer } },
-                { binding: 2, resource: { buffer: this.drawArgsBuffer } },
-            ],
-        });
     }
 
     public async renderScene(driver: WebGPUDriver) {
@@ -202,14 +161,8 @@ export class Scene {
 
         if (this.models.length === 0) return;
 
-        driver.device.queue.writeBuffer(this.drawArgsBuffer, 0, new Uint32Array([36, 0, 0, 0, 0]));
         const encoder = driver.device.createCommandEncoder();
-
-        const computePass = encoder.beginComputePass();
-        computePass.setPipeline(this.compactPipeline);
-        computePass.setBindGroup(0, this.compactBindGroup);
-        computePass.dispatchWorkgroups(Math.ceil(this.cubeInstanceBuffer.capacity / 64));
-        computePass.end();
+        const buffers = this.cubeInstanceBuffer.compact(driver, encoder, 36);
 
         const vp = this.camera.getProjection().matmul(this.camera.getView());
         driver.device.queue.writeBuffer(this.vpBuffer, 0, vp.toColumnMajor());
@@ -241,9 +194,9 @@ export class Scene {
         pass.setVertexBuffer(0, this.models[0]!.getVertexBuffer(driver));
         pass.setIndexBuffer(this.models[0]!.getIndexbuffer(driver), 'uint16');
 
-        pass.setVertexBuffer(1, this.cleanBuffer);
+        pass.setVertexBuffer(1, buffers.drawBuffer);
 
-        pass.drawIndexedIndirect(this.drawArgsBuffer, 0);
+        pass.drawIndexedIndirect(buffers.drawArgsBuffer, 0);
 
         pass.end();
         driver.device.queue.submit([encoder.finish()]);
