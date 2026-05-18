@@ -5,6 +5,7 @@ import type { Interceptor } from './collision/interceptor';
 import { InstanceBuffer } from './InstanceBuffer';
 import type { DirectionalLight, LightSource } from './lightSource';
 import { Vec3 } from './math/vec';
+import type { Mesh } from './mesh';
 import type { Model } from './model';
 import { WebGPUDriver } from './webGpuDriver';
 
@@ -16,8 +17,6 @@ export class Scene {
 
     private pipeline!: GPURenderPipeline;
     private depthTexture!: GPUTexture;
-
-    private cubeInstanceBuffer!: InstanceBuffer;
 
     private vpBuffer!: GPUBuffer;
     private vpBindGroup!: GPUBindGroup;
@@ -37,6 +36,8 @@ export class Scene {
 
     public interceptor: Interceptor = new BVHInterceptor();
 
+    private instanceBuffers: Map<Mesh, InstanceBuffer> = new Map();
+
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
         this.models = [];
@@ -46,8 +47,6 @@ export class Scene {
         this.inited = true;
         const format = driver.format;
         const shaderCode = test;
-
-        this.cubeInstanceBuffer = new InstanceBuffer(driver, 10000);
 
         const shaderModule = driver.device.createShaderModule({
             code: shaderCode,
@@ -158,17 +157,22 @@ export class Scene {
             this.init(driver, driver.ctx.canvas.width, driver.ctx.canvas.height);
             this.inited = true;
         }
-
         if (this.models.length === 0) return;
-
-        const encoder = driver.device.createCommandEncoder();
-        const buffers = this.cubeInstanceBuffer.compact(driver, encoder, 36);
 
         const vp = this.camera.getProjection().matmul(this.camera.getView());
         driver.device.queue.writeBuffer(this.vpBuffer, 0, vp.toColumnMajor());
 
-        const currentTexture = driver.ctx.getCurrentTexture();
-        const colorView = currentTexture.createView();
+        const encoder = driver.device.createCommandEncoder();
+
+        const drawCalls: { mesh: Mesh; drawBuffer: GPUBuffer; drawArgsBuffer: GPUBuffer }[] = [];
+        for (const [mesh, instanceBuffer] of this.instanceBuffers) {
+            const buffers = instanceBuffer.compact(driver, encoder, mesh.indices.length);
+            drawCalls.push({
+                mesh,
+                drawBuffer: buffers.drawBuffer,
+                drawArgsBuffer: buffers.drawArgsBuffer,
+            });
+        }
 
         const pass = encoder.beginRenderPass({
             colorAttachments: [
@@ -176,7 +180,7 @@ export class Scene {
                     clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
                     loadOp: 'clear',
                     storeOp: 'store',
-                    view: colorView,
+                    view: driver.ctx.getCurrentTexture().createView(),
                 },
             ],
             depthStencilAttachment: {
@@ -188,28 +192,39 @@ export class Scene {
         });
 
         pass.setPipeline(this.pipeline);
-
         pass.setBindGroup(0, this.vpBindGroup);
 
-        pass.setVertexBuffer(0, this.models[0]!.getVertexBuffer(driver));
-        pass.setIndexBuffer(this.models[0]!.getIndexbuffer(driver), 'uint16');
-
-        pass.setVertexBuffer(1, buffers.drawBuffer);
-
-        pass.drawIndexedIndirect(buffers.drawArgsBuffer, 0);
+        for (const { mesh, drawBuffer, drawArgsBuffer } of drawCalls) {
+            pass.setVertexBuffer(0, mesh.getVertexBuffer(driver));
+            pass.setIndexBuffer(mesh.getIndexBuffer(driver), 'uint16');
+            pass.setVertexBuffer(1, drawBuffer);
+            pass.drawIndexedIndirect(drawArgsBuffer, 0);
+        }
 
         pass.end();
         driver.device.queue.submit([encoder.finish()]);
     }
 
+    private setAndGetInstanceBuffer(driver: WebGPUDriver, mesh: Mesh) {
+        if (!this.instanceBuffers.has(mesh)) {
+            this.instanceBuffers.set(mesh, new InstanceBuffer(driver, 10000));
+        }
+
+        return this.instanceBuffers.get(mesh);
+    }
+
     public addObject(driver: WebGPUDriver, model: Model) {
-        model.slot = this.cubeInstanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+
+        model.slot = instanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
+
         this.models[model.slot] = model;
         this.interceptor.update(this.models);
     }
 
-    public removeObject(driver: WebGPUDriver, slot: number) {
-        this.cubeInstanceBuffer.remove(driver, slot);
+    public removeObject(driver: WebGPUDriver, model: Model) {
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+        instanceBuffer.remove(driver, model.slot!);
         this.interceptor.update(this.models);
     }
 
@@ -221,7 +236,8 @@ export class Scene {
         if (model.slot === undefined) return;
         if (this.models.length <= model.slot) return;
         model.rotate(rot);
-        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+        instanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
         this.interceptor.update(this.models);
     }
 
@@ -231,7 +247,13 @@ export class Scene {
             return;
         }
         model.setTranslate(position);
-        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+
+        this.setAndGetInstanceBuffer(driver, model.mesh)!.update(
+            driver,
+            model.slot,
+            model.getModelMatrix().toColumnMajor(),
+        );
+
         this.interceptor.update(this.models);
     }
 
@@ -241,7 +263,13 @@ export class Scene {
             return;
         }
         model.setRotate(rot);
-        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+
+        this.setAndGetInstanceBuffer(driver, model.mesh)!.update(
+            driver,
+            model.slot,
+            model.getModelMatrix().toColumnMajor(),
+        );
+
         this.interceptor.update(this.models);
     }
 
@@ -251,7 +279,11 @@ export class Scene {
             return;
         }
         model.translate(offset);
-        this.cubeInstanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
+        this.setAndGetInstanceBuffer(driver, model.mesh)!.update(
+            driver,
+            model.slot,
+            model.getModelMatrix().toColumnMajor(),
+        );
         this.interceptor.update(this.models);
     }
 
@@ -299,7 +331,7 @@ export class Scene {
 
     public removePointLight(driver: WebGPUDriver, light: Model & LightSource) {
         this.pointLightSlots[light.lightSlot] = null;
-        this.removeObject(driver, light.slot!);
+        this.removeObject(driver, light);
         driver.device.queue.writeBuffer(
             this.pointLightBuffer,
             light.lightSlot * 32,

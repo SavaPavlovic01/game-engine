@@ -4,6 +4,7 @@ import { DirectionalLight } from './graphics/lightSource.js';
 import { Vec3 } from './graphics/math/vec.js';
 import { Cube } from './graphics/objects/cube.js';
 import { LightCube } from './graphics/objects/lightCube.js';
+import { Ramp } from './graphics/objects/ramp.js';
 import { Scene } from './graphics/scene.js';
 import { InputHandler } from './inputHandler.js';
 
@@ -30,11 +31,13 @@ window.onload = async () => {
     startGameButton.onclick = () => inputHandler.startGame();
 
     const cube = new Cube();
+    const ramp = new Ramp(new Vec3(5, 0, 0));
 
     const light = new LightCube();
     const dirLight = new DirectionalLight(new Vec3(0, 0, -1), new Vec3(1, 1, 1));
     game.gameState.scene.addPointLight(game.graphics.driver, light);
     game.gameState.scene.addObject(game.graphics.driver, cube);
+    game.gameState.scene.addObject(game.graphics.driver, ramp);
     //game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
 
     setInterval(() => {

@@ -3,6 +3,7 @@ import type { Camera } from './camera';
 import type { AABB } from './collision/ray';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
+import { Mesh } from './mesh';
 import type { WebGPUDriver } from './webGpuDriver';
 
 export abstract class Model {
@@ -10,15 +11,12 @@ export abstract class Model {
     public rotation: Vec3;
     private scale: Vec3;
 
-    protected verticies: Float32Array;
-    public indecies: Uint16Array;
-
     private modelMatrix: Mat4;
 
-    private vertexBuffer?: GPUBuffer;
-    private indexBuffer?: GPUBuffer;
     private uniformBuffer?: GPUBuffer;
     private bindGroup?: GPUBindGroup;
+
+    public mesh: Mesh;
 
     public slot?: number;
 
@@ -32,35 +30,12 @@ export abstract class Model {
         this.translation = translate;
         this.rotation = rotate;
         this.scale = scale;
-        this.verticies = verticies;
-        this.indecies = indexBuffer;
+        this.mesh = new Mesh(verticies, indexBuffer);
         this.modelMatrix = this.buildModelMatrix();
     }
 
     public getModelMatrix() {
         return this.modelMatrix;
-    }
-
-    public getVertexBuffer(driver: WebGPUDriver) {
-        if (!this.vertexBuffer) {
-            this.vertexBuffer = driver.fillBuffer(
-                this.verticies,
-                GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-            );
-        }
-
-        return this.vertexBuffer;
-    }
-
-    public getIndexbuffer(driver: WebGPUDriver) {
-        if (!this.indexBuffer) {
-            this.indexBuffer = driver.fillBuffer(
-                this.indecies,
-                GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-            );
-        }
-
-        return this.indexBuffer;
     }
 
     public getUniform(driver: WebGPUDriver) {
