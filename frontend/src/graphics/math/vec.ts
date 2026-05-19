@@ -84,4 +84,20 @@ export class Vec3 {
     public negate(): Vec3 {
         return new Vec3(-this.X, -this.Y, -this.Z);
     }
+
+    public scale(n: number): Vec3 {
+        return new Vec3(this.X * n, this.Y * n, this.Z * n);
+    }
+
+    public dot(other: Vec3): number {
+        return this.X * other.X + this.Y * other.Y + this.Z * other.Z;
+    }
+
+    public distanceTo(other: Vec3): number {
+        return this.sub(other).magnitude();
+    }
+
+    public lengthSquared(): number {
+        return this.X * this.X + this.Y * this.Y + this.Z * this.Z;
+    }
 }

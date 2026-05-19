@@ -1,5 +1,6 @@
 import type { AABB } from '../collision/ray';
 import { Vec3 } from '../math/vec';
+import { Mesh } from '../mesh';
 import { Model } from '../model';
 
 export class Ramp extends Model {
@@ -40,12 +41,14 @@ export class Ramp extends Model {
         14, 15, 16, 14, 16, 17,
     ]);
 
+    public static readonly mesh: Mesh = new Mesh(Ramp.rampVertices, Ramp.indices);
+
     constructor(
         translate: Vec3 = new Vec3(0, 0, 0),
         rotate: Vec3 = new Vec3(0, 0, 0),
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
-        super(translate, rotate, scale, Ramp.rampVertices, Ramp.indices);
+        super(translate, rotate, scale, Ramp.mesh);
     }
 
     public get center(): Vec3 {

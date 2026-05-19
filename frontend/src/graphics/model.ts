@@ -1,12 +1,13 @@
 import { simpleFrag, simpleVert } from '../generated/shaders';
 import type { Camera } from './camera';
-import type { AABB } from './collision/ray';
+import type { Bounded } from './collision/BVH';
+import { Ray, type AABB } from './collision/ray';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import { Mesh } from './mesh';
 import type { WebGPUDriver } from './webGpuDriver';
 
-export abstract class Model {
+export abstract class Model implements Bounded {
     public translation: Vec3;
     public rotation: Vec3;
     private scale: Vec3;
@@ -20,17 +21,11 @@ export abstract class Model {
 
     public slot?: number;
 
-    constructor(
-        translate: Vec3,
-        rotate: Vec3,
-        scale: Vec3,
-        verticies: Float32Array,
-        indexBuffer: Uint16Array,
-    ) {
+    constructor(translate: Vec3, rotate: Vec3, scale: Vec3, mesh: Mesh) {
         this.translation = translate;
         this.rotation = rotate;
         this.scale = scale;
-        this.mesh = new Mesh(verticies, indexBuffer);
+        this.mesh = mesh;
         this.modelMatrix = this.buildModelMatrix();
     }
 
@@ -87,7 +82,7 @@ export abstract class Model {
 
     abstract getLocalAABB(): AABB;
 
-    public getWorldAABB(): AABB {
+    get aabb(): AABB {
         const local = this.getLocalAABB();
         const m = this.modelMatrix.values;
 
@@ -106,6 +101,15 @@ export abstract class Model {
             min: new Vec3(c.X - whx, c.Y - why, c.Z - whz),
             max: new Vec3(c.X + whx, c.Y + why, c.Z + whz),
         };
+    }
+
+    rayIntersects(ray: Ray): number | null {
+        const inv = this.modelMatrix.invertTRS();
+        const localRay = new Ray(
+            inv.transformPoint(ray.origin),
+            inv.transformDir(ray.direction).normalize(),
+        );
+        return localRay.intersectsAABB(this.getLocalAABB());
     }
 
     private buildModelMatrix(): Mat4 {

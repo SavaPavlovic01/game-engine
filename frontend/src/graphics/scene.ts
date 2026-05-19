@@ -218,10 +218,13 @@ export class Scene {
 
         model.slot = instanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
 
-        this.models[model.slot] = model;
+        //this.models[model.slot] = model;
+        this.models.push(model);
         this.interceptor.update(this.models);
     }
 
+    // TODO: fix removing
+    // remove the model from this.models
     public removeObject(driver: WebGPUDriver, model: Model) {
         const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
         instanceBuffer.remove(driver, model.slot!);

@@ -31,6 +31,7 @@ window.onload = async () => {
     startGameButton.onclick = () => inputHandler.startGame();
 
     const cube = new Cube();
+    const cube2 = new Cube(new Vec3(1, 0, 0));
     const ramp = new Ramp(new Vec3(5, 0, 0));
 
     const light = new LightCube();
@@ -38,6 +39,7 @@ window.onload = async () => {
     game.gameState.scene.addPointLight(game.graphics.driver, light);
     game.gameState.scene.addObject(game.graphics.driver, cube);
     game.gameState.scene.addObject(game.graphics.driver, ramp);
+    game.gameState.scene.addObject(game.graphics.driver, cube2);
     //game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
 
     setInterval(() => {
