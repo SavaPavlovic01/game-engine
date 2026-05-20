@@ -2,6 +2,7 @@ import { compact, simpleFrag, simpleVert, test } from '../generated/shaders';
 import { Camera } from './camera';
 import { BVHInterceptor, type HitResult } from './collision/BVHInterceptor';
 import type { Interceptor } from './collision/interceptor';
+import { StaticBVH } from './collision/StaticBVH';
 import { InstanceBuffer } from './InstanceBuffer';
 import type { DirectionalLight, LightSource } from './lightSource';
 import { Vec3 } from './math/vec';
@@ -37,6 +38,8 @@ export class Scene {
     public interceptor: Interceptor = new BVHInterceptor();
 
     private instanceBuffers: Map<Mesh, InstanceBuffer> = new Map();
+
+    public staticModelsBvh: StaticBVH = new StaticBVH();
 
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
@@ -221,6 +224,16 @@ export class Scene {
         //this.models[model.slot] = model;
         this.models.push(model);
         this.interceptor.update(this.models);
+    }
+
+    public addStaticObject(driver: WebGPUDriver, model: Model) {
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+
+        model.slot = instanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
+
+        this.models.push(model);
+        this.interceptor.update(this.models);
+        this.staticModelsBvh.addModel(model);
     }
 
     // TODO: fix removing

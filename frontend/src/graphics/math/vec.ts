@@ -100,4 +100,8 @@ export class Vec3 {
     public lengthSquared(): number {
         return this.X * this.X + this.Y * this.Y + this.Z * this.Z;
     }
+
+    toString() {
+        return `${this.X}, ${this.Y}, ${this.Z}`;
+    }
 }

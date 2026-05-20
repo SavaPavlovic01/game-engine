@@ -15,6 +15,8 @@ import { WebRtcHandler } from './webrtcHandler.js';
 import { GameState } from './gameState.js';
 import { TICK_PERIOD } from './constants.js';
 import { ActionBuffer } from './actions/actionBuffer.js';
+import { CharacterController } from './graphics/collision/CharacterController.js';
+import type { Model } from './graphics/model.js';
 
 export class Game {
     public lobbyChannel?: LobbyChannel;
@@ -36,7 +38,19 @@ export class Game {
 
     public gameStarted: boolean = false;
 
+    public playerControllers: CharacterController[] = [];
+    public playerModels: Model[] = [];
+
     constructor() {}
+
+    public addPlayer() {
+        const controller = new CharacterController(this.gameState.scene.staticModelsBvh);
+        const player = new Cube(new Vec3(0, -0.3, -5));
+        this.playerModels.push(player);
+        this.playerControllers.push(controller);
+
+        this.gameState.scene.addObject(this.graphics.driver, player);
+    }
 
     public static async create() {
         const game = new Game();
@@ -65,16 +79,29 @@ export class Game {
     }
 
     public startRender() {
-        this.lastTime = performance.now();
+        this.lastTime = -1;
         requestAnimationFrame(this.frame);
     }
 
     public frame = async (now: number) => {
         if (!this.gameState) return;
+
+        if (this.lastTime === -1) {
+            this.lastTime = now;
+            requestAnimationFrame(this.frame);
+            return;
+        }
+
         await this.gameState.scene.renderScene(this.graphics.driver);
         const delta = now - this.lastTime;
         this.lastTime = now;
         this.accumulator += delta;
+
+        if (this.playerModels.length > 0) {
+            const player = this.playerModels[0];
+            const controller = this.playerControllers[0]!;
+            controller.test(player?.aabb!);
+        }
 
         while (this.accumulator >= TICK_PERIOD) {
             this.tick++;

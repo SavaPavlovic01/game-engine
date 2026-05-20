@@ -55,6 +55,8 @@ export class InputHandler {
         console.log('hellos');
         let dx = 0;
         let dy = 0;
+        let px = 0;
+        let py = 0;
         const cameraForward = this.game.gameState.scene.camera.getForwardVector().zeroIndex(1);
         const rightVector = this.game.gameState.scene.camera.getRightVector().zeroIndex(1);
         switch (ev.key) {
@@ -84,11 +86,36 @@ export class InputHandler {
             case 'q':
                 this.game.gameState.scene.camera.rotate(new Vec3(0, -0.1, 0.5));
                 break;
+
+            case 'i':
+                px = 1;
+                py = 0;
+                break;
+            case 'j':
+                px = 0;
+                py = 1;
+                break;
+            case 'k':
+                px = -1;
+                py = 0;
+                break;
+            case 'l':
+                px = 0;
+                py = -1;
+                break;
+
             default:
                 return;
         }
 
         const action = new MoveAction(this.game.tick, dx, dy);
+        const model = this.game.playerModels[0]!;
+        console.log(dy, 0, dx);
+        this.game.gameState.scene.offsetObject(
+            this.game.graphics.driver,
+            model,
+            new Vec3(-py, 0, -px),
+        );
         action.invoke(this.game);
         this.game.actionBuffer.push(action);
     };

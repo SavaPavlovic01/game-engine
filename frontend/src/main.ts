@@ -32,14 +32,19 @@ window.onload = async () => {
 
     const cube = new Cube();
     const cube2 = new Cube(new Vec3(1, 0, 0));
-    const ramp = new Ramp(new Vec3(5, 0, 0));
+    const ramp = new Ramp(new Vec3(0, 0, 0), new Vec3(0, 0, 0), new Vec3(10, 5, 10));
+    const wall = new Cube(new Vec3(0, 0, 5), new Vec3(0, 0, 0), new Vec3(10, 10, 5));
 
     const light = new LightCube();
     const dirLight = new DirectionalLight(new Vec3(0, 0, -1), new Vec3(1, 1, 1));
     game.gameState.scene.addPointLight(game.graphics.driver, light);
-    game.gameState.scene.addObject(game.graphics.driver, cube);
-    game.gameState.scene.addObject(game.graphics.driver, ramp);
-    game.gameState.scene.addObject(game.graphics.driver, cube2);
+    // game.gameState.scene.addObject(game.graphics.driver, cube);
+    //game.gameState.scene.addStaticObject(game.graphics.driver, ramp);
+    game.gameState.scene.addStaticObject(game.graphics.driver, wall);
+    // game.gameState.scene.addObject(game.graphics.driver, cube2);
+    const floor = new Cube(new Vec3(0, -10, 0), new Vec3(0, 0, 0), new Vec3(20, 10, 20));
+    game.addPlayer();
+    game.gameState.scene.addStaticObject(game.graphics.driver, floor);
     //game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
 
     setInterval(() => {

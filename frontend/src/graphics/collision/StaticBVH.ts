@@ -1,12 +1,18 @@
+import type { Mesh } from '../mesh';
+import type { Model } from '../model';
 import { BVH } from './BVH';
 import type { AABB, Ray } from './ray';
-import type { Triangle } from './triangle';
+import { Triangle } from './triangle';
 
 export class StaticBVH {
     private bvh: BVH = new BVH();
+    private triangles: Triangle[] = [];
 
-    public build(triangles: Triangle[]): void {
-        this.bvh.build(triangles);
+    public addModel(model: Model) {
+        this.triangles = this.triangles.concat(
+            Triangle.extractFromMesh(model.mesh, model.getModelMatrix()),
+        );
+        this.bvh.build(this.triangles);
     }
 
     public raycast(ray: Ray): { triangle: Triangle; distance: number } | null {
