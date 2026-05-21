@@ -88,20 +88,20 @@ export class InputHandler {
                 break;
 
             case 'i':
-                px = 1;
+                px = 0.1;
                 py = 0;
                 break;
             case 'j':
                 px = 0;
-                py = 1;
+                py = 0.1;
                 break;
             case 'k':
-                px = -1;
+                px = -0.1;
                 py = 0;
                 break;
             case 'l':
                 px = 0;
-                py = -1;
+                py = -0.1;
                 break;
 
             default:

@@ -1,4 +1,5 @@
 import { Vec3 } from '../math/vec';
+import type { Model } from '../model';
 import type { StaticBVH } from './StaticBVH';
 import type { AABB } from './ray';
 import { Triangle } from './triangle';
@@ -95,6 +96,7 @@ export class CharacterController {
     private static readonly RADIUS = 0.4;
     private static readonly HALF_HEIGHT = 0.8;
     private static readonly SKIN_WIDTH = 0.01;
+    private static readonly GROUND_THRESHOLD = 0.7;
 
     constructor(staticBVH: StaticBVH) {
         this.staticBVH = staticBVH;
@@ -116,37 +118,68 @@ export class CharacterController {
         };
     }
 
-    public update(position: Vec3, dt: number): Vec3 {
+    public update(model: Model, dt: number): Vec3 {
         if (!this.grounded) {
             this.velocity = this.velocity.add(new Vec3(0, CharacterController.GRAVITY * dt, 0));
         }
 
-        let newPosition = position.add(this.velocity.scale(dt));
+        let newPosition = model.translation.add(this.velocity.scale(dt));
 
-        for (let i = 0; i < 3; i++) {
-            const result = this.resolveCollisions(newPosition);
-            newPosition = result.position;
-            if (result.grounded) {
-                this.grounded = true;
-                this.velocity = new Vec3(this.velocity.X, 0, this.velocity.Z);
-            } else {
-                this.grounded = false;
+        for (let i = 0; i < 1; i++) {
+            const offset = newPosition.sub(model.translation);
+            const modelAabb = model.aabb;
+            const aabb = { max: modelAabb.max.add(offset), min: modelAabb.min.add(offset) };
+            const collisions = this.test(aabb);
+            if (collisions.length === 0) break;
+
+            let groundedThisFrame = false;
+            for (const coll of collisions) {
+                newPosition = newPosition.add(coll.normal.scale(coll.penetration));
+
+                const velDot = this.velocity.dot(coll.normal);
+                if (velDot < 0) {
+                    this.velocity = this.velocity.sub(coll.normal.scale(velDot));
+                }
+
+                if (coll.normal.Y > CharacterController.GROUND_THRESHOLD) {
+                    groundedThisFrame = true;
+                }
             }
+            this.grounded = groundedThisFrame;
         }
+
+        if (this.grounded) {
+            this.velocity = new Vec3(this.velocity.X, 0, this.velocity.Z);
+        }
+        console.log(`velo: ${this.velocity}`);
 
         return newPosition;
     }
 
     public test(aabb: AABB) {
+        const collisions = [];
         const candiates = this.staticBVH.query(aabb);
         for (let c of candiates) {
             const hit = aabbVsTriangleMTV(aabb, c);
-            const msg =
-                hit === null
-                    ? `missed this guy`
-                    : `hit this guy, normal: ${hit.normal} pen: ${hit.penetration}`;
-            console.log(msg);
+            if (hit !== null) collisions.push(hit);
         }
+
+        return collisions;
+    }
+
+    public move(model: Model) {
+        let pos = model.translation;
+        let grounded = false;
+        const colls = this.test(model.aabb);
+        console.log(`start pos ${pos}`);
+        for (const coll of colls) {
+            console.log(`adding ${coll.normal.scale(coll.penetration)}`);
+            pos = pos.add(coll.normal.scale(coll.penetration));
+            if (coll.normal.Y > 0.7) grounded = true;
+        }
+
+        console.log(`returing ${pos}`);
+        return { pos: pos, grounded: grounded };
     }
 
     private resolveCollisions(position: Vec3): { position: Vec3; grounded: boolean } {

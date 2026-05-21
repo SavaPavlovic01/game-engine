@@ -100,7 +100,10 @@ export class Game {
         if (this.playerModels.length > 0) {
             const player = this.playerModels[0];
             const controller = this.playerControllers[0]!;
-            controller.test(player?.aabb!);
+            const pos = controller.update(player!, delta / 1000);
+
+            console.log(`moving player ${pos}`);
+            this.gameState.scene.setObjectTranslate(this.graphics.driver, player!, pos);
         }
 
         while (this.accumulator >= TICK_PERIOD) {

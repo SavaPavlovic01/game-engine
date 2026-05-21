@@ -33,7 +33,7 @@ window.onload = async () => {
     const cube = new Cube();
     const cube2 = new Cube(new Vec3(1, 0, 0));
     const ramp = new Ramp(new Vec3(0, 0, 0), new Vec3(0, 0, 0), new Vec3(10, 5, 10));
-    const wall = new Cube(new Vec3(0, 0, 5), new Vec3(0, 0, 0), new Vec3(10, 10, 5));
+    const wall = new Cube(new Vec3(0, 0, 6.9), new Vec3(0, 0, 0), new Vec3(10, 10, 5));
 
     const light = new LightCube();
     const dirLight = new DirectionalLight(new Vec3(0, 0, -1), new Vec3(1, 1, 1));
