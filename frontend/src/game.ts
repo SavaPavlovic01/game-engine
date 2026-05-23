@@ -17,6 +17,9 @@ import { TICK_PERIOD } from './constants.js';
 import { ActionBuffer } from './actions/actionBuffer.js';
 import { CharacterController } from './graphics/collision/CharacterController.js';
 import type { Model } from './graphics/model.js';
+import { Material } from './graphics/materials/material.js';
+import { ShaderPipeline } from './graphics/shaderPipeline.js';
+import { test } from './generated/shaders.js';
 
 export class Game {
     public lobbyChannel?: LobbyChannel;
@@ -45,7 +48,7 @@ export class Game {
 
     public addPlayer() {
         const controller = new CharacterController(this.gameState.scene.staticModelsBvh);
-        const player = new Cube(new Vec3(0, -0.3, -5));
+        const player = new Cube(this.gameState.scene.materials.default, new Vec3(0, -0.3, -5));
         this.playerModels.push(player);
         this.playerControllers.push(controller);
 
@@ -59,6 +62,7 @@ export class Game {
         game.gameState = new GameState(game.graphics);
 
         game.lobbyChannel = await LobbyChannel.create(game);
+
         return game;
     }
 

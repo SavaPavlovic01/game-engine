@@ -4,6 +4,9 @@ export class Mesh {
     public readonly vertices: Float32Array;
     public readonly indices: Uint16Array;
 
+    private static nextId: number = 0;
+    public readonly id: number = Mesh.nextId++;
+
     private vertexBuffer?: GPUBuffer;
     private indexBuffer?: GPUBuffer;
 

@@ -3,11 +3,14 @@ import { Camera } from './camera';
 import { BVHInterceptor, type HitResult } from './collision/BVHInterceptor';
 import type { Interceptor } from './collision/interceptor';
 import { StaticBVH } from './collision/StaticBVH';
+import { Graphics } from './graphics';
 import { InstanceBuffer } from './InstanceBuffer';
 import type { DirectionalLight, LightSource } from './lightSource';
+import { Material, MaterialLibrary } from './materials/material';
 import { Vec3 } from './math/vec';
 import type { Mesh } from './mesh';
 import type { Model } from './model';
+import { ShaderPipeline } from './shaderPipeline';
 import { WebGPUDriver } from './webGpuDriver';
 
 export class Scene {
@@ -37,96 +40,47 @@ export class Scene {
 
     public interceptor: Interceptor = new BVHInterceptor();
 
-    private instanceBuffers: Map<Mesh, InstanceBuffer> = new Map();
+    private instanceBuffers: Map<Mesh, Map<Material, InstanceBuffer>> = new Map();
 
     public staticModelsBvh: StaticBVH = new StaticBVH();
+
+    public materials!: MaterialLibrary;
 
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
         this.models = [];
     }
 
+    private defaultShader!: ShaderPipeline;
+
+    public sceneBindGroupLayout!: GPUBindGroupLayout;
+    public materialBindGroupLayout!: GPUBindGroupLayout;
+
     public init(driver: WebGPUDriver, w: number, h: number) {
         this.inited = true;
-        const format = driver.format;
-        const shaderCode = test;
-
-        const shaderModule = driver.device.createShaderModule({
-            code: shaderCode,
+        this.sceneBindGroupLayout = driver.device.createBindGroupLayout({
+            entries: [
+                {
+                    binding: 0,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' },
+                },
+                { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+                { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+            ],
         });
 
-        this.pipeline = driver.device.createRenderPipeline({
-            layout: 'auto',
-
-            vertex: {
-                module: shaderModule,
-                entryPoint: 'vs_main',
-                buffers: [
-                    {
-                        arrayStride: 24,
-                        attributes: [
-                            {
-                                shaderLocation: 0,
-                                offset: 0,
-                                format: 'float32x3',
-                            },
-                            {
-                                shaderLocation: 5,
-                                offset: 12,
-                                format: 'float32x3',
-                            },
-                        ],
-                    },
-                    {
-                        arrayStride: 64,
-                        stepMode: 'instance',
-                        attributes: [
-                            {
-                                shaderLocation: 1,
-                                offset: 0,
-                                format: 'float32x4',
-                            },
-                            {
-                                shaderLocation: 2,
-                                offset: 16,
-                                format: 'float32x4',
-                            },
-                            {
-                                shaderLocation: 3,
-                                offset: 32,
-                                format: 'float32x4',
-                            },
-                            {
-                                shaderLocation: 4,
-                                offset: 48,
-                                format: 'float32x4',
-                            },
-                        ],
-                    },
-                ],
-            },
-
-            fragment: {
-                module: shaderModule,
-                entryPoint: 'fs_main',
-                targets: [
-                    {
-                        format,
-                    },
-                ],
-            },
-
-            primitive: {
-                topology: 'triangle-list',
-                cullMode: 'back',
-            },
-
-            depthStencil: {
-                depthWriteEnabled: true,
-                depthCompare: 'less',
-                format: 'depth24plus',
-            },
+        this.materialBindGroupLayout = driver.device.createBindGroupLayout({
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+            ],
         });
+
+        const pipelineLayout = driver.device.createPipelineLayout({
+            bindGroupLayouts: [this.sceneBindGroupLayout, this.materialBindGroupLayout],
+        });
+
+        this.defaultShader = new ShaderPipeline('default', driver, test, pipelineLayout);
 
         this.depthTexture = driver.device.createTexture({
             size: [w, h],
@@ -145,14 +99,21 @@ export class Scene {
         );
 
         this.vpBuffer = driver.makeBuffer(64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+
         this.vpBindGroup = driver.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(0),
+            layout: this.sceneBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: this.vpBuffer } },
                 { binding: 1, resource: { buffer: this.directionalLightBuffer } },
                 { binding: 2, resource: { buffer: this.pointLightBuffer } },
             ],
         });
+
+        this.materials = new MaterialLibrary(
+            driver,
+            this.materialBindGroupLayout,
+            this.defaultShader,
+        );
     }
 
     public async renderScene(driver: WebGPUDriver) {
@@ -167,14 +128,22 @@ export class Scene {
 
         const encoder = driver.device.createCommandEncoder();
 
-        const drawCalls: { mesh: Mesh; drawBuffer: GPUBuffer; drawArgsBuffer: GPUBuffer }[] = [];
-        for (const [mesh, instanceBuffer] of this.instanceBuffers) {
-            const buffers = instanceBuffer.compact(driver, encoder, mesh.indices.length);
-            drawCalls.push({
-                mesh,
-                drawBuffer: buffers.drawBuffer,
-                drawArgsBuffer: buffers.drawArgsBuffer,
-            });
+        const drawCalls: {
+            mesh: Mesh;
+            material: Material;
+            drawBuffer: GPUBuffer;
+            drawArgsBuffer: GPUBuffer;
+        }[] = [];
+        for (const [mesh, byMaterial] of this.instanceBuffers) {
+            for (const [material, buffer] of byMaterial) {
+                const buffers = buffer.compact(driver, encoder, mesh.indices.length);
+                drawCalls.push({
+                    mesh,
+                    material,
+                    drawBuffer: buffers.drawBuffer,
+                    drawArgsBuffer: buffers.drawArgsBuffer,
+                });
+            }
         }
 
         const pass = encoder.beginRenderPass({
@@ -194,10 +163,14 @@ export class Scene {
             },
         });
 
-        pass.setPipeline(this.pipeline);
-        pass.setBindGroup(0, this.vpBindGroup);
-
-        for (const { mesh, drawBuffer, drawArgsBuffer } of drawCalls) {
+        let currentShader: ShaderPipeline | null = null;
+        for (const { mesh, material, drawBuffer, drawArgsBuffer } of drawCalls) {
+            if (material.shader !== currentShader) {
+                pass.setPipeline(material.shader.pipeline);
+                pass.setBindGroup(0, this.vpBindGroup);
+                currentShader = material.shader;
+            }
+            material.bind(pass);
             pass.setVertexBuffer(0, mesh.getVertexBuffer(driver));
             pass.setIndexBuffer(mesh.getIndexBuffer(driver), 'uint16');
             pass.setVertexBuffer(1, drawBuffer);
@@ -208,16 +181,22 @@ export class Scene {
         driver.device.queue.submit([encoder.finish()]);
     }
 
-    private setAndGetInstanceBuffer(driver: WebGPUDriver, mesh: Mesh) {
-        if (!this.instanceBuffers.has(mesh)) {
-            this.instanceBuffers.set(mesh, new InstanceBuffer(driver, 10000));
+    private setAndGetInstanceBuffer(driver: WebGPUDriver, mesh: Mesh, material: Material) {
+        let byMaterial = this.instanceBuffers.get(mesh);
+        if (!byMaterial) {
+            byMaterial = new Map();
+            this.instanceBuffers.set(mesh, byMaterial);
         }
-
-        return this.instanceBuffers.get(mesh);
+        let buffer = byMaterial.get(material);
+        if (!buffer) {
+            buffer = new InstanceBuffer(driver, 10000);
+            byMaterial.set(material, buffer);
+        }
+        return buffer;
     }
 
     public addObject(driver: WebGPUDriver, model: Model) {
-        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!;
 
         model.slot = instanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
 
@@ -227,7 +206,7 @@ export class Scene {
     }
 
     public addStaticObject(driver: WebGPUDriver, model: Model) {
-        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!;
 
         model.slot = instanceBuffer.add(driver, model.getModelMatrix().toColumnMajor());
 
@@ -239,7 +218,7 @@ export class Scene {
     // TODO: fix removing
     // remove the model from this.models
     public removeObject(driver: WebGPUDriver, model: Model) {
-        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!;
         instanceBuffer.remove(driver, model.slot!);
         this.interceptor.update(this.models);
     }
@@ -252,7 +231,7 @@ export class Scene {
         if (model.slot === undefined) return;
         if (this.models.length <= model.slot) return;
         model.rotate(rot);
-        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh)!;
+        const instanceBuffer = this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!;
         instanceBuffer.update(driver, model.slot, model.getModelMatrix().toColumnMajor());
         this.interceptor.update(this.models);
     }
@@ -264,7 +243,7 @@ export class Scene {
         }
         model.setTranslate(position);
 
-        this.setAndGetInstanceBuffer(driver, model.mesh)!.update(
+        this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!.update(
             driver,
             model.slot,
             model.getModelMatrix().toColumnMajor(),
@@ -280,7 +259,7 @@ export class Scene {
         }
         model.setRotate(rot);
 
-        this.setAndGetInstanceBuffer(driver, model.mesh)!.update(
+        this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!.update(
             driver,
             model.slot,
             model.getModelMatrix().toColumnMajor(),
@@ -295,7 +274,7 @@ export class Scene {
             return;
         }
         model.translate(offset);
-        this.setAndGetInstanceBuffer(driver, model.mesh)!.update(
+        this.setAndGetInstanceBuffer(driver, model.mesh, model.material)!.update(
             driver,
             model.slot,
             model.getModelMatrix().toColumnMajor(),

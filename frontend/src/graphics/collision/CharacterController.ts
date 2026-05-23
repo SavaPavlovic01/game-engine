@@ -97,6 +97,8 @@ export class CharacterController {
     private static readonly HALF_HEIGHT = 0.8;
     private static readonly SKIN_WIDTH = 0.01;
     private static readonly GROUND_THRESHOLD = 0.7;
+    private static readonly JUMP_FORCE = 1;
+    private static readonly MAX_ITERATIONS = 1;
 
     constructor(staticBVH: StaticBVH) {
         this.staticBVH = staticBVH;
@@ -118,27 +120,46 @@ export class CharacterController {
         };
     }
 
+    private gravityVelocity: Vec3 = new Vec3(0, 0, 0);
+    private moveVelocity: Vec3 = new Vec3(0, 0, 0);
+
+    public setMoveVelocity(v: Vec3) {
+        this.moveVelocity = v;
+    }
+
+    public jump() {
+        if (this.grounded) {
+            this.gravityVelocity = new Vec3(0, CharacterController.JUMP_FORCE, 0);
+            this.grounded = false;
+        }
+    }
+
     public update(model: Model, dt: number): Vec3 {
         if (!this.grounded) {
-            this.velocity = this.velocity.add(new Vec3(0, CharacterController.GRAVITY * dt, 0));
+            this.gravityVelocity = this.gravityVelocity.add(
+                new Vec3(0, CharacterController.GRAVITY * dt, 0),
+            );
         }
 
-        let newPosition = model.translation.add(this.velocity.scale(dt));
+        const velocity = this.gravityVelocity.add(this.moveVelocity);
+        let newPosition = model.translation.add(velocity.scale(dt));
 
-        for (let i = 0; i < 1; i++) {
+        for (let i = 0; i < CharacterController.MAX_ITERATIONS; i++) {
             const offset = newPosition.sub(model.translation);
             const modelAabb = model.aabb;
             const aabb = { max: modelAabb.max.add(offset), min: modelAabb.min.add(offset) };
             const collisions = this.test(aabb);
+
+            this.grounded = false;
             if (collisions.length === 0) break;
 
             let groundedThisFrame = false;
             for (const coll of collisions) {
                 newPosition = newPosition.add(coll.normal.scale(coll.penetration));
 
-                const velDot = this.velocity.dot(coll.normal);
-                if (velDot < 0) {
-                    this.velocity = this.velocity.sub(coll.normal.scale(velDot));
+                const gravDot = this.gravityVelocity.dot(coll.normal);
+                if (gravDot < 0) {
+                    this.gravityVelocity = this.gravityVelocity.sub(coll.normal.scale(gravDot));
                 }
 
                 if (coll.normal.Y > CharacterController.GROUND_THRESHOLD) {
@@ -149,9 +170,8 @@ export class CharacterController {
         }
 
         if (this.grounded) {
-            this.velocity = new Vec3(this.velocity.X, 0, this.velocity.Z);
+            this.gravityVelocity = new Vec3(0, 0, 0);
         }
-        console.log(`velo: ${this.velocity}`);
 
         return newPosition;
     }

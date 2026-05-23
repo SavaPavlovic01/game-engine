@@ -12,7 +12,7 @@ export class GameState {
 
     constructor(graphics: Graphics) {
         this.graphics = graphics;
-        this.scene = new Scene(new Vec3(0, 0, 5));
+        this.scene = new Scene(new Vec3(10, -2, -4), new Vec3(0, -1.5, 0));
         this.scene.init(graphics.driver, graphics.canvas?.width, graphics.canvas?.height);
     }
 

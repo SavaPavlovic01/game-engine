@@ -31,6 +31,15 @@ struct VertexOutput {
     @location(1) worldNormal: vec3<f32>,
 };
 
+struct Material {
+    baseColor: vec3<f32>,
+    _pad: f32,
+    roughness: f32,
+    metallic: f32,
+};
+
+@group(1) @binding(0) var<uniform> material: Material;
+
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<uniform> directionalLights: array<DirectionalLight, 4>;
 @group(0) @binding(2) var<uniform> pointLights: array<PointLight, 16>;
@@ -48,7 +57,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let baseColor = vec3<f32>(0.8, 0.8, 0.8);
+    let baseColor = material.baseColor;
     let normal = normalize(input.worldNormal);
 
     let ambient = 0.15;

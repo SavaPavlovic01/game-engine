@@ -2,6 +2,7 @@ import { simpleFrag, simpleVert } from '../generated/shaders';
 import type { Camera } from './camera';
 import type { Bounded } from './collision/BVH';
 import { Ray, type AABB } from './collision/ray';
+import { Material } from './materials/material';
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import { Mesh } from './mesh';
@@ -21,11 +22,14 @@ export abstract class Model implements Bounded {
 
     public slot?: number;
 
-    constructor(translate: Vec3, rotate: Vec3, scale: Vec3, mesh: Mesh) {
+    public material: Material;
+
+    constructor(translate: Vec3, rotate: Vec3, scale: Vec3, mesh: Mesh, material: Material) {
         this.translation = translate;
         this.rotation = rotate;
         this.scale = scale;
         this.mesh = mesh;
+        this.material = material;
         this.modelMatrix = this.buildModelMatrix();
     }
 
