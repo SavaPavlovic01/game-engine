@@ -1,10 +1,12 @@
+import { STRIDE } from '../constants';
 import type { WebGPUDriver } from './webGpuDriver';
 
 export const MESH_VERTEX_LAYOUT: GPUVertexBufferLayout = {
-    arrayStride: 24,
+    arrayStride: STRIDE * 4,
     attributes: [
         { shaderLocation: 0, offset: 0, format: 'float32x3' },
         { shaderLocation: 5, offset: 12, format: 'float32x3' },
+        { shaderLocation: 6, offset: 24, format: 'float32x2' },
     ],
 };
 

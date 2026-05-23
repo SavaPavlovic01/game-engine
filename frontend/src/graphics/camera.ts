@@ -4,7 +4,7 @@ import { Vec3 } from './math/vec';
 import { Model } from './model';
 
 export class Camera {
-    private position: Vec3;
+    public position: Vec3;
     private rotation: Vec3;
 
     public fov: number = (60 * Math.PI) / 180;

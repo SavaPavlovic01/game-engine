@@ -50,4 +50,37 @@ export class WebGPUDriver {
         debugBuffer.destroy();
         return result;
     }
+
+    public async loadTexture(path: string): Promise<GPUTexture> {
+        const img = new Image();
+        img.src = 'stone.png';
+        await img.decode();
+        const bitmap = await createImageBitmap(img);
+
+        const texture = this.device.createTexture({
+            size: [bitmap.width, bitmap.height],
+            format: 'rgba8unorm',
+            usage:
+                GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.COPY_DST |
+                GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        this.device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
+            bitmap.width,
+            bitmap.height,
+        ]);
+
+        return texture;
+    }
+
+    public makeSampler() {
+        return this.device.createSampler({
+            magFilter: 'linear',
+            minFilter: 'linear',
+            mipmapFilter: 'linear',
+            addressModeU: 'repeat',
+            addressModeV: 'repeat',
+        });
+    }
 }

@@ -55,9 +55,14 @@ export class Scene {
 
     public sceneBindGroupLayout!: GPUBindGroupLayout;
     public materialBindGroupLayout!: GPUBindGroupLayout;
+    public textureBingGroupLayout!: GPUBindGroupLayout;
+    public sampler!: GPUSampler;
+
+    private cameraPosBuffer!: GPUBuffer;
 
     public init(driver: WebGPUDriver, w: number, h: number) {
         this.inited = true;
+        this.sampler = driver.makeSampler();
         this.sceneBindGroupLayout = driver.device.createBindGroupLayout({
             entries: [
                 {
@@ -67,6 +72,7 @@ export class Scene {
                 },
                 { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
                 { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+                { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
             ],
         });
 
@@ -76,8 +82,23 @@ export class Scene {
             ],
         });
 
+        this.textureBingGroupLayout = driver.device.createBindGroupLayout({
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+                {
+                    binding: 1,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'float' },
+                },
+            ],
+        });
+
         const pipelineLayout = driver.device.createPipelineLayout({
-            bindGroupLayouts: [this.sceneBindGroupLayout, this.materialBindGroupLayout],
+            bindGroupLayouts: [
+                this.sceneBindGroupLayout,
+                this.materialBindGroupLayout,
+                this.textureBingGroupLayout,
+            ],
         });
 
         this.defaultShader = new ShaderPipeline('default', driver, test, pipelineLayout);
@@ -100,18 +121,25 @@ export class Scene {
 
         this.vpBuffer = driver.makeBuffer(64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
 
+        this.cameraPosBuffer = driver.makeBuffer(
+            16,
+            GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        );
+
         this.vpBindGroup = driver.device.createBindGroup({
             layout: this.sceneBindGroupLayout,
             entries: [
                 { binding: 0, resource: { buffer: this.vpBuffer } },
                 { binding: 1, resource: { buffer: this.directionalLightBuffer } },
                 { binding: 2, resource: { buffer: this.pointLightBuffer } },
+                { binding: 3, resource: { buffer: this.cameraPosBuffer } },
             ],
         });
 
         this.materials = new MaterialLibrary(
             driver,
             this.materialBindGroupLayout,
+            this.textureBingGroupLayout,
             this.defaultShader,
         );
     }
@@ -125,6 +153,8 @@ export class Scene {
 
         const vp = this.camera.getProjection().matmul(this.camera.getView());
         driver.device.queue.writeBuffer(this.vpBuffer, 0, vp.toColumnMajor());
+
+        driver.device.queue.writeBuffer(this.cameraPosBuffer, 0, this.camera.position.values);
 
         const encoder = driver.device.createCommandEncoder();
 

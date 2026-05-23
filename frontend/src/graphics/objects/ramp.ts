@@ -1,3 +1,4 @@
+import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Vec3 } from '../math/vec';
@@ -7,22 +8,19 @@ import { Model } from '../model';
 export class Ramp extends Model {
     public static rampVertices = new Float32Array([
         // Bottom (-Y)
-        -0.5, -0.5, -0.5, 0, -1, 0, 0.5, -0.5, -0.5, 0, -1, 0, 0.5, -0.5, 0.5, 0, -1, 0, -0.5, -0.5,
-        0.5, 0, -1, 0,
-
+        -0.5, -0.5, -0.5, 0, -1, 0, 0, 0, 0.5, -0.5, -0.5, 0, -1, 0, 1, 0, 0.5, -0.5, 0.5, 0, -1, 0,
+        1, 1, -0.5, -0.5, 0.5, 0, -1, 0, 0, 1,
         // Back (+Z)
-        -0.5, -0.5, 0.5, 0, 0, 1, 0.5, -0.5, 0.5, 0, 0, 1, 0.5, 0.5, 0.5, 0, 0, 1, -0.5, 0.5, 0.5,
-        0, 0, 1,
-
-        // Left (-X)
-        -0.5, -0.5, 0.5, -1, 0, 0, -0.5, -0.5, -0.5, -1, 0, 0, -0.5, 0.5, 0.5, -1, 0, 0,
-
-        // Right (+X)
-        0.5, -0.5, -0.5, 1, 0, 0, 0.5, -0.5, 0.5, 1, 0, 0, 0.5, 0.5, 0.5, 1, 0, 0,
-
-        // Front slope (-Z facing)
-        -0.5, -0.5, -0.5, 0, 0.7071, -0.7071, -0.5, 0.5, 0.5, 0, 0.7071, -0.7071, 0.5, 0.5, 0.5, 0,
-        0.7071, -0.7071, 0.5, -0.5, -0.5, 0, 0.7071, -0.7071,
+        -0.5, -0.5, 0.5, 0, 0, 1, 0, 0, 0.5, -0.5, 0.5, 0, 0, 1, 1, 0, 0.5, 0.5, 0.5, 0, 0, 1, 1, 1,
+        -0.5, 0.5, 0.5, 0, 0, 1, 0, 1,
+        // Left (-X) triangle
+        -0.5, -0.5, 0.5, -1, 0, 0, 0, 0, -0.5, -0.5, -0.5, -1, 0, 0, 1, 0, -0.5, 0.5, 0.5, -1, 0, 0,
+        0, 1,
+        // Right (+X) triangle
+        0.5, -0.5, -0.5, 1, 0, 0, 1, 0, 0.5, -0.5, 0.5, 1, 0, 0, 0, 0, 0.5, 0.5, 0.5, 1, 0, 0, 0, 1,
+        // Slope
+        -0.5, -0.5, -0.5, 0, 0.7071, -0.7071, 0, 0, -0.5, 0.5, 0.5, 0, 0.7071, -0.7071, 0, 1, 0.5,
+        0.5, 0.5, 0, 0.7071, -0.7071, 1, 1, 0.5, -0.5, -0.5, 0, 0.7071, -0.7071, 1, 0,
     ]);
 
     public static indices: Uint16Array = new Uint16Array([
@@ -42,7 +40,7 @@ export class Ramp extends Model {
         14, 15, 16, 14, 16, 17,
     ]);
 
-    public static readonly mesh: Mesh = new Mesh(Ramp.rampVertices, Ramp.indices);
+    public static readonly mesh: Mesh = new Mesh(Ramp.rampVertices, Ramp.indices, STRIDE);
 
     constructor(
         material: Material,

@@ -13,7 +13,7 @@ export class LightCube extends Cube implements LightSource {
         scale: Vec3 = new Vec3(1, 1, 1),
         public lightColor: Vec3 = new Vec3(1, 1, 1),
         public intensity: number = 1,
-        public radius: number = 10,
+        public radius: number = 100,
     ) {
         super(material, translate, rotate, scale);
     }

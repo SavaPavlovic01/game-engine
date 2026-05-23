@@ -1,3 +1,4 @@
+import { Vec3 } from './math/vec';
 import type { WebGPUDriver } from './webGpuDriver';
 
 export class Mesh {
@@ -6,13 +7,17 @@ export class Mesh {
 
     private static nextId: number = 0;
     public readonly id: number = Mesh.nextId++;
+    public readonly positions: Vec3[] = [];
 
     private vertexBuffer?: GPUBuffer;
     private indexBuffer?: GPUBuffer;
 
-    constructor(vertices: Float32Array, indices: Uint16Array) {
+    constructor(vertices: Float32Array, indices: Uint16Array, stride: number) {
         this.vertices = vertices;
         this.indices = indices;
+        for (let i = 0; i < vertices.length; i += stride) {
+            this.positions.push(new Vec3(vertices[i]!, vertices[i + 1]!, vertices[i + 2]!));
+        }
     }
 
     public getVertexBuffer(driver: WebGPUDriver): GPUBuffer {

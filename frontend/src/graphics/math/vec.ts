@@ -1,5 +1,5 @@
 export class Vec3 {
-    private values: Float32Array;
+    public values: Float32Array;
 
     constructor(x: number, y: number, z: number) {
         this.values = new Float32Array([x, y, z]);

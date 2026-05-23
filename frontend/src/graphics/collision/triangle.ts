@@ -66,30 +66,15 @@ export class Triangle implements Bounded {
     }
 
     // meant to be called on static geometry once, maybe move to the gpu?
+
     public static extractFromMesh(mesh: Mesh, modelMatrix: Mat4): Triangle[] {
-        const verts = mesh.vertices;
-        const indices = mesh.indices;
         const triangles: Triangle[] = [];
-        const stride = 6;
-
-        for (let i = 0; i < indices.length; i += 3) {
-            const ai = indices[i]! * stride;
-            const bi = indices[i + 1]! * stride;
-            const ci = indices[i + 2]! * stride;
-
-            const a = modelMatrix.transformPoint(
-                new Vec3(verts[ai]!, verts[ai + 1]!, verts[ai + 2]!),
-            );
-            const b = modelMatrix.transformPoint(
-                new Vec3(verts[bi]!, verts[bi + 1]!, verts[bi + 2]!),
-            );
-            const c = modelMatrix.transformPoint(
-                new Vec3(verts[ci]!, verts[ci + 1]!, verts[ci + 2]!),
-            );
-
+        for (let i = 0; i < mesh.indices.length; i += 3) {
+            const a = modelMatrix.transformPoint(mesh.positions[mesh.indices[i]!]!);
+            const b = modelMatrix.transformPoint(mesh.positions[mesh.indices[i + 1]!]!);
+            const c = modelMatrix.transformPoint(mesh.positions[mesh.indices[i + 2]!]!);
             triangles.push(new Triangle(a, b, c));
         }
-
         return triangles;
     }
 }

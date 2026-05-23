@@ -19,6 +19,7 @@ struct PointLight {
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(5) normal: vec3<f32>,
+    @location(6) uv: vec2<f32>,
     @location(1) mvp0: vec4<f32>,
     @location(2) mvp1: vec4<f32>,
     @location(3) mvp2: vec4<f32>,
@@ -29,6 +30,7 @@ struct VertexOutput {
     @builtin(position) clipPosition: vec4<f32>,
     @location(0) worldPos: vec3<f32>,
     @location(1) worldNormal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
 };
 
 struct Material {
@@ -43,6 +45,10 @@ struct Material {
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<uniform> directionalLights: array<DirectionalLight, 4>;
 @group(0) @binding(2) var<uniform> pointLights: array<PointLight, 16>;
+@group(0) @binding(3) var<uniform> cameraPos: vec3<f32>;
+
+@group(2) @binding(0) var mySampler: sampler;
+@group(2) @binding(1) var myTexture: texture_2d<f32>;
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
@@ -52,37 +58,60 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.clipPosition = uniforms.vp * worldPos;
     output.worldPos = worldPos.xyz;
     output.worldNormal = normalize((m * vec4<f32>(input.normal, 0.0)).xyz);
+    output.uv = input.uv;
     return output;
 }
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let baseColor = material.baseColor;
-    let normal = normalize(input.worldNormal);
+    let texColor = textureSample(myTexture, mySampler, input.uv);
+    let baseColor = material.baseColor * texColor.rgb;
 
-    let ambient = 0.15;
+    let normal = normalize(input.worldNormal);
+    let viewDir = normalize(cameraPos - input.worldPos);
+    let ambient = mix(0.15, 0.3, material.metallic);
+
+    let shininess = clamp(pow(2.0, (1.0 - material.roughness) * 10.0) + 1.0, 1.0, 256.0);
+
+
+
     var diffuse = vec3<f32>(0.0);
+    var specular = vec3<f32>(0.0);
 
     for (var i = 0u; i < 4u; i++) {
         let light = directionalLights[i];
-        let contribution = max(dot(normal, normalize(-light.direction)), 0.0) * light.intensity;
-        diffuse += light.color * contribution;
+        let lightDir = normalize(-light.direction);
+
+        let diff = max(dot(normal, lightDir), 0.0) * light.intensity;
+        diffuse += light.color * diff;
+
+        let halfDir = normalize(lightDir + viewDir);
+        let spec = pow(max(dot(normal, halfDir), 0.0), shininess) * light.intensity;
+        specular += light.color * spec;
     }
 
     for (var i = 0u; i < 16u; i++) {
         let light = pointLights[i];
         let toLight = light.position - input.worldPos;
         let dist = length(toLight);
-
         if dist > light.radius { continue; }
-
         let attenuation = 1.0 - (dist / light.radius);
+        let lightDir = normalize(toLight);
 
-        let contribution = max(dot(normal, normalize(toLight)), 0.0) 
-            * light.intensity 
-            * attenuation;
-        diffuse += light.color * contribution;
+        let diff = max(dot(normal, lightDir), 0.0) * light.intensity * attenuation;
+        diffuse += light.color * diff;
+
+        let halfDir = normalize(lightDir + viewDir);
+        let spec = pow(max(dot(normal, halfDir), 0.0), shininess) * light.intensity * attenuation;
+        specular += light.color * spec;
     }
 
-    return vec4<f32>(baseColor * (ambient + diffuse), 1.0);
+    let specularColor = mix(vec3<f32>(0.04), material.baseColor, material.metallic);
+    let diffuseColor = baseColor * (1.0 - material.metallic);
+
+    let specularStrength = mix(0.5, 1.0, material.metallic);
+
+    let color = diffuseColor * (ambient + diffuse) + specularColor * specular * specularStrength;
+
+    return vec4<f32>(color, 1.0);
 }
