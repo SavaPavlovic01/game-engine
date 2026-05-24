@@ -2,6 +2,7 @@ import { compact, simpleFrag, simpleVert, test } from '../generated/shaders';
 import { Camera } from './camera';
 import { BVHInterceptor, type HitResult } from './collision/BVHInterceptor';
 import type { Interceptor } from './collision/interceptor';
+import type { AABB } from './collision/ray';
 import { StaticBVH } from './collision/StaticBVH';
 import { Graphics } from './graphics';
 import { InstanceBuffer } from './InstanceBuffer';
@@ -11,6 +12,7 @@ import { Vec3 } from './math/vec';
 import type { Mesh } from './mesh';
 import type { Model } from './model';
 import { ShaderPipeline } from './shaderPipeline';
+import { DirectionalShadowMap, type ShadowCaster } from './shadowMap';
 import { WebGPUDriver } from './webGpuDriver';
 
 export class Scene {
@@ -60,6 +62,9 @@ export class Scene {
 
     private cameraPosBuffer!: GPUBuffer;
 
+    private shadowMap!: DirectionalShadowMap;
+    private dsampler!: GPUSampler;
+
     public init(driver: WebGPUDriver, w: number, h: number) {
         this.inited = true;
         this.sampler = driver.makeSampler();
@@ -73,6 +78,26 @@ export class Scene {
                 { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
                 { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
                 { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+                {
+                    binding: 4,
+                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+                    buffer: { type: 'uniform' },
+                },
+                {
+                    binding: 5,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: { type: 'comparison' },
+                },
+                {
+                    binding: 6,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    texture: { sampleType: 'depth' },
+                },
+                {
+                    binding: 7,
+                    visibility: GPUShaderStage.FRAGMENT,
+                    sampler: { type: 'non-filtering' },
+                },
             ],
         });
 
@@ -126,6 +151,13 @@ export class Scene {
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         );
 
+        this.shadowMap = new DirectionalShadowMap(driver);
+
+        this.dsampler = driver.device.createSampler({
+            magFilter: 'nearest',
+            minFilter: 'nearest',
+        });
+
         this.vpBindGroup = driver.device.createBindGroup({
             layout: this.sceneBindGroupLayout,
             entries: [
@@ -133,6 +165,10 @@ export class Scene {
                 { binding: 1, resource: { buffer: this.directionalLightBuffer } },
                 { binding: 2, resource: { buffer: this.pointLightBuffer } },
                 { binding: 3, resource: { buffer: this.cameraPosBuffer } },
+                { binding: 4, resource: { buffer: this.shadowMap.lightViewProjBuffer } },
+                { binding: 5, resource: this.shadowMap.sampler },
+                { binding: 6, resource: this.shadowMap.textureView },
+                { binding: 7, resource: this.dsampler },
             ],
         });
 
@@ -142,6 +178,17 @@ export class Scene {
             this.textureBingGroupLayout,
             this.defaultShader,
         );
+    }
+
+    private compactInstanceBuffers(driver: WebGPUDriver, encoder: GPUCommandEncoder) {
+        const drawCalls = [];
+        for (const [mesh, byMaterial] of this.instanceBuffers) {
+            for (const [material, buffer] of byMaterial) {
+                const compacted = buffer.compact(driver, encoder, mesh.indices.length);
+                drawCalls.push({ mesh, material, rawBuffer: buffer, ...compacted });
+            }
+        }
+        return drawCalls;
     }
 
     public async renderScene(driver: WebGPUDriver) {
@@ -158,23 +205,25 @@ export class Scene {
 
         const encoder = driver.device.createCommandEncoder();
 
-        const drawCalls: {
-            mesh: Mesh;
-            material: Material;
-            drawBuffer: GPUBuffer;
-            drawArgsBuffer: GPUBuffer;
-        }[] = [];
-        for (const [mesh, byMaterial] of this.instanceBuffers) {
-            for (const [material, buffer] of byMaterial) {
-                const buffers = buffer.compact(driver, encoder, mesh.indices.length);
-                drawCalls.push({
-                    mesh,
-                    material,
-                    drawBuffer: buffers.drawBuffer,
-                    drawArgsBuffer: buffers.drawArgsBuffer,
-                });
-            }
-        }
+        const drawCalls = this.compactInstanceBuffers(driver, encoder);
+
+        const casters: ShadowCaster[] = drawCalls.map((d) => ({
+            mesh: d.mesh,
+            buffer: d.rawBuffer,
+        }));
+
+        const tightBounds: AABB = {
+            min: new Vec3(-10, -2, -10),
+            max: new Vec3(10, 10, 10),
+        };
+
+        this.shadowMap.render(
+            driver,
+            encoder,
+            this.directionalLightSlots[0]!.direction,
+            tightBounds,
+            casters,
+        );
 
         const pass = encoder.beginRenderPass({
             colorAttachments: [

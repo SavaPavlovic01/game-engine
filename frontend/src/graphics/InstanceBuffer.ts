@@ -22,6 +22,8 @@ export class InstanceBuffer {
     private cpuCleanBuffer!: GPUBuffer;
     private cpuDrawArgsBuffer!: GPUBuffer;
 
+    private lastCompacted?: { drawBuffer: GPUBuffer; drawArgsBuffer: GPUBuffer };
+
     constructor(driver: WebGPUDriver, capacity: number, forceCPU: boolean = false) {
         this.capacity = capacity;
         this.forceCPU = forceCPU;
@@ -121,11 +123,18 @@ export class InstanceBuffer {
         drawBuffer: GPUBuffer;
         drawArgsBuffer: GPUBuffer;
     } {
+        let ret;
         if (this.forceCPU || this.liveCount < GPU_THRESHOLD) {
-            return this.compactCPU(driver, indexCount);
+            ret = this.compactCPU(driver, indexCount);
         } else {
-            return this.compactGPU(driver, encoder, indexCount);
+            ret = this.compactGPU(driver, encoder, indexCount);
         }
+        this.lastCompacted = ret;
+        return ret;
+    }
+
+    public getLastCompacted() {
+        return this.lastCompacted;
     }
 
     private compactCPU(

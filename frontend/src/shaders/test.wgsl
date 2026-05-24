@@ -46,6 +46,11 @@ struct Material {
 @group(0) @binding(1) var<uniform> directionalLights: array<DirectionalLight, 4>;
 @group(0) @binding(2) var<uniform> pointLights: array<PointLight, 16>;
 @group(0) @binding(3) var<uniform> cameraPos: vec3<f32>;
+@group(0) @binding(4) var<uniform> lightViewProj: mat4x4<f32>;
+@group(0) @binding(5) var shadowSampler: sampler_comparison;
+@group(0) @binding(6) var shadowMap: texture_depth_2d;
+@group(0) @binding(7) var debugSampler: sampler;
+
 
 @group(2) @binding(0) var mySampler: sampler;
 @group(2) @binding(1) var myTexture: texture_2d<f32>;
@@ -60,6 +65,26 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.worldNormal = normalize((m * vec4<f32>(input.normal, 0.0)).xyz);
     output.uv = input.uv;
     return output;
+}
+
+fn shadowFactor(worldPos: vec3<f32>, normal: vec3<f32>, lightDir: vec3<f32>) -> f32 {
+    let lightSpace = lightViewProj * vec4<f32>(worldPos, 1.0);
+    let proj = lightSpace.xyz / lightSpace.w;
+    let uv = proj.xy * vec2<f32>(0.5, -0.5) + 0.5;
+    let cosAngle = clamp(dot(normal, lightDir), 0.0, 1.0);
+    let bias = 0.0001;//mix(0.0002, 0.0001, cosAngle);
+    let texelSize = 1.0 / 2048.0;
+    var shadow = 0.0;
+    for (var x = -1; x <= 1; x++) {
+        for (var y = -1; y <= 1; y++) {
+            let offset = vec2<f32>(f32(x), f32(y)) * texelSize;
+            shadow += textureSampleCompare(shadowMap, shadowSampler, uv + offset, proj.z - bias);
+        }
+    }
+    shadow = shadow / 9.0;
+    let inFrustum = uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0 && proj.z >= 0.0 && proj.z <= 1.0;
+
+    return select(1.0, shadow, inFrustum);
 }
 
 @fragment
@@ -111,7 +136,16 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let specularStrength = mix(0.5, 1.0, material.metallic);
 
-    let color = diffuseColor * (ambient + diffuse) + specularColor * specular * specularStrength;
+    let lightDir = normalize(-directionalLights[0].direction);
+    let shadow = shadowFactor(input.worldPos, normal, lightDir);
+    let color = diffuseColor * (ambient + diffuse * shadow) + specularColor * specular * shadow * specularStrength;
+
 
     return vec4<f32>(color, 1.0);
+   // let lightSpace = lightViewProj * vec4<f32>(input.worldPos, 1.0);
+   // let proj = lightSpace.xyz / lightSpace.w;
+   // let uv = proj.xy * vec2<f32>(0.5, -0.5) + 0.5;
+   // let storedDepth = textureSample(shadowMap, debugSampler, uv);
+   // return vec4<f32>(proj.z, storedDepth, 0.0, 1.0);
+
 }

@@ -50,17 +50,18 @@ window.onload = async () => {
     const ramp = new Ramp(wallMat, new Vec3(0, -2, 0), new Vec3(0, 0, 0), new Vec3(10, 5, 10));
     const wall = new Cube(wallMat, new Vec3(0, 0, 6.9), new Vec3(0, 0, 0), new Vec3(10, 10, 5));
 
-    const light = new LightCube(material, new Vec3(0, 10, -2));
-    const dirLight = new DirectionalLight(new Vec3(0, 0, 1), new Vec3(1, 1, 1));
-    game.gameState.scene.addPointLight(game.graphics.driver, light);
+    //const light = new LightCube(material, new Vec3(0, 10, -2));
+    const dirLight = new DirectionalLight(new Vec3(0.3, -0.5, 0.3), new Vec3(1, 1, 1), 0.5);
+
+    //game.gameState.scene.addPointLight(game.graphics.driver, light);
     // game.gameState.scene.addObject(game.graphics.driver, cube);
     game.gameState.scene.addStaticObject(game.graphics.driver, ramp);
     game.gameState.scene.addStaticObject(game.graphics.driver, wall);
     // game.gameState.scene.addObject(game.graphics.driver, cube2);
-    const floor = new Cube(material, new Vec3(0, -5, 0), new Vec3(0, 0, 0), new Vec3(20, 1, 20));
+    const floor = new Cube(material, new Vec3(0, -5, 0), new Vec3(0, 0, 0), new Vec3(50, 1, 50));
     game.addPlayer();
     game.gameState.scene.addStaticObject(game.graphics.driver, floor);
-    //game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
+    game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
 
     //setInterval(() => {
     //function update() {

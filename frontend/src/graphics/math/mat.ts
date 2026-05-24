@@ -218,4 +218,38 @@ export class Mat4 {
             m[8]! * v.x() + m[9]! * v.y() + m[10]! * v.z(),
         );
     }
+
+    public static orthographic(
+        left: number,
+        right: number,
+        bottom: number,
+        top: number,
+        near: number,
+        far: number,
+    ): Mat4 {
+        const lr = 1 / (right - left);
+        const bt = 1 / (top - bottom);
+        const nf = 1 / (far - near);
+
+        return new Mat4(
+            new Float32Array([
+                2 * lr,
+                0,
+                0,
+                0,
+                0,
+                2 * bt,
+                0,
+                0,
+                0,
+                0,
+                -nf,
+                0, // note: -nf not -2*nf
+                -(right + left) * lr,
+                -(top + bottom) * bt,
+                near * nf,
+                1,
+            ]),
+        );
+    }
 }
