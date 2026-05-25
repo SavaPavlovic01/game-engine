@@ -13,7 +13,7 @@ import type { Mesh } from './mesh';
 import type { Model } from './model';
 import { ShaderPipeline } from './shaderPipeline';
 import { DirectionalShadowMap, type ShadowCaster } from './shadowMap';
-import { WebGPUDriver } from './webGpuDriver';
+import { BindGroupLayoutBuilder, FRAG, VERT_FRAG, WebGPUDriver } from './webGpuDriver';
 
 export class Scene {
     public camera: Camera;
@@ -55,7 +55,6 @@ export class Scene {
 
     private defaultShader!: ShaderPipeline;
 
-    public sceneBindGroupLayout!: GPUBindGroupLayout;
     public materialBindGroupLayout!: GPUBindGroupLayout;
     public textureBingGroupLayout!: GPUBindGroupLayout;
     public sampler!: GPUSampler;
@@ -68,61 +67,32 @@ export class Scene {
     public init(driver: WebGPUDriver, w: number, h: number) {
         this.inited = true;
         this.sampler = driver.makeSampler();
-        this.sceneBindGroupLayout = driver.device.createBindGroupLayout({
-            entries: [
-                {
-                    binding: 0,
-                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: { type: 'uniform' },
-                },
-                { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-                { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-                { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-                {
-                    binding: 4,
-                    visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-                    buffer: { type: 'uniform' },
-                },
-                {
-                    binding: 5,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    sampler: { type: 'comparison' },
-                },
-                {
-                    binding: 6,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    texture: { sampleType: 'depth' },
-                },
-                {
-                    binding: 7,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    sampler: { type: 'non-filtering' },
-                },
-            ],
-        });
 
-        this.materialBindGroupLayout = driver.device.createBindGroupLayout({
-            entries: [
-                { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-            ],
-        });
+        const sceneBindGroupLayout = new BindGroupLayoutBuilder(driver.device)
+            .uniform(0, VERT_FRAG)
+            .uniform(1, FRAG)
+            .uniform(2, FRAG)
+            .uniform(3, FRAG)
+            .uniform(4, VERT_FRAG)
+            .sampler(5, FRAG, 'comparison')
+            .texture(6, FRAG, 'depth')
+            .sampler(7, FRAG, 'non-filtering')
+            .build();
 
-        this.textureBingGroupLayout = driver.device.createBindGroupLayout({
-            entries: [
-                { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-                {
-                    binding: 1,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    texture: { sampleType: 'float' },
-                },
-            ],
-        });
+        const materialBindGroupLayout = new BindGroupLayoutBuilder(driver.device)
+            .uniform(0, FRAG)
+            .build();
+
+        const textureBingGroupLayout = new BindGroupLayoutBuilder(driver.device)
+            .sampler(0, FRAG, 'filtering')
+            .texture(1, FRAG, 'float')
+            .build();
 
         const pipelineLayout = driver.device.createPipelineLayout({
             bindGroupLayouts: [
-                this.sceneBindGroupLayout,
-                this.materialBindGroupLayout,
-                this.textureBingGroupLayout,
+                sceneBindGroupLayout.layout,
+                materialBindGroupLayout.layout,
+                textureBingGroupLayout.layout,
             ],
         });
 
@@ -158,24 +128,22 @@ export class Scene {
             minFilter: 'nearest',
         });
 
-        this.vpBindGroup = driver.device.createBindGroup({
-            layout: this.sceneBindGroupLayout,
-            entries: [
-                { binding: 0, resource: { buffer: this.vpBuffer } },
-                { binding: 1, resource: { buffer: this.directionalLightBuffer } },
-                { binding: 2, resource: { buffer: this.pointLightBuffer } },
-                { binding: 3, resource: { buffer: this.cameraPosBuffer } },
-                { binding: 4, resource: { buffer: this.shadowMap.lightViewProjBuffer } },
-                { binding: 5, resource: this.shadowMap.sampler },
-                { binding: 6, resource: this.shadowMap.textureView },
-                { binding: 7, resource: this.dsampler },
-            ],
-        });
+        this.vpBindGroup = sceneBindGroupLayout
+            .createBindGroup()
+            .buffer(0, this.vpBuffer)
+            .buffer(1, this.directionalLightBuffer)
+            .buffer(2, this.pointLightBuffer)
+            .buffer(3, this.cameraPosBuffer)
+            .buffer(4, this.shadowMap.lightViewProjBuffer)
+            .sampler(5, this.shadowMap.sampler)
+            .textureView(6, this.shadowMap.textureView)
+            .sampler(7, this.dsampler)
+            .build();
 
         this.materials = new MaterialLibrary(
             driver,
-            this.materialBindGroupLayout,
-            this.textureBingGroupLayout,
+            materialBindGroupLayout.layout,
+            textureBingGroupLayout.layout,
             this.defaultShader,
         );
     }
@@ -221,7 +189,7 @@ export class Scene {
             driver,
             encoder,
             this.directionalLightSlots[0]!.direction,
-            tightBounds,
+            this.interceptor.getWorldBounds(),
             casters,
         );
 

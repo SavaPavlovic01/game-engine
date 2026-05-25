@@ -84,3 +84,116 @@ export class WebGPUDriver {
         });
     }
 }
+
+type BufferBindingType = 'uniform' | 'storage' | 'read-only-storage';
+type SamplerBindingType = 'filtering' | 'non-filtering' | 'comparison';
+type TextureSampleType = 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+type StorageTextureAccess = 'write-only' | 'read-only' | 'read-write';
+type Visibility = GPUShaderStageFlags;
+
+const VERT_FRAG = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+const VERT = GPUShaderStage.VERTEX;
+const FRAG = GPUShaderStage.FRAGMENT;
+
+type UnfilledBindings<
+    TEntries extends readonly GPUBindGroupLayoutEntry[],
+    TFilled extends number,
+> = Exclude<TEntries[number]['binding'], TFilled>;
+
+class BindGroupLayoutBuilder<TEntries extends readonly GPUBindGroupLayoutEntry[] = []> {
+    private readonly entries: GPUBindGroupLayoutEntry[] = [];
+
+    constructor(private readonly device: GPUDevice) {}
+
+    private add<E extends GPUBindGroupLayoutEntry>(
+        entry: E,
+    ): BindGroupLayoutBuilder<readonly [...TEntries, E]> {
+        this.entries.push(entry);
+        return this as any;
+    }
+
+    uniform(binding: number, visibility: Visibility, type: BufferBindingType = 'uniform') {
+        return this.add({ binding, visibility, buffer: { type } });
+    }
+
+    sampler(binding: number, visibility: Visibility, type: SamplerBindingType = 'filtering') {
+        return this.add({ binding, visibility, sampler: { type } });
+    }
+
+    texture(binding: number, visibility: Visibility, sampleType: TextureSampleType = 'float') {
+        return this.add({ binding, visibility, texture: { sampleType } });
+    }
+
+    storageTexture(
+        binding: number,
+        visibility: Visibility,
+        format: GPUTextureFormat,
+        access: StorageTextureAccess = 'write-only',
+    ) {
+        return this.add({ binding, visibility, storageTexture: { format, access } });
+    }
+
+    build(): TypedBindGroupLayout<TEntries> {
+        const layout = this.device.createBindGroupLayout({ entries: this.entries });
+        return new TypedBindGroupLayout(this.device, layout, this.entries as unknown as TEntries);
+    }
+}
+
+class TypedBindGroupLayout<TEntries extends readonly GPUBindGroupLayoutEntry[]> {
+    constructor(
+        private readonly device: GPUDevice,
+        readonly layout: GPUBindGroupLayout,
+        private readonly entries: TEntries,
+    ) {}
+
+    createBindGroup(): BindGroupBuilder<TEntries> {
+        return new BindGroupBuilder(this.device, this, this.entries);
+    }
+}
+
+class BindGroupBuilder<
+    TEntries extends readonly GPUBindGroupLayoutEntry[],
+    TFilled extends number = never,
+> {
+    private readonly entries: GPUBindGroupEntry[] = [];
+
+    constructor(
+        private readonly device: GPUDevice,
+        private readonly layout: TypedBindGroupLayout<TEntries>,
+        private readonly layoutEntries: TEntries,
+    ) {}
+
+    buffer<B extends UnfilledBindings<TEntries, TFilled>>(
+        binding: B,
+        buffer: GPUBuffer,
+    ): BindGroupBuilder<TEntries, TFilled | B> {
+        this.entries.push({ binding, resource: { buffer } });
+        return this as any;
+    }
+
+    sampler<B extends UnfilledBindings<TEntries, TFilled>>(
+        binding: B,
+        sampler: GPUSampler,
+    ): BindGroupBuilder<TEntries, TFilled | B> {
+        this.entries.push({ binding, resource: sampler });
+        return this as any;
+    }
+
+    textureView<B extends UnfilledBindings<TEntries, TFilled>>(
+        binding: B,
+        view: GPUTextureView,
+    ): BindGroupBuilder<TEntries, TFilled | B> {
+        this.entries.push({ binding, resource: view });
+        return this as any;
+    }
+
+    build(): UnfilledBindings<TEntries, TFilled> extends never ? GPUBindGroup : never {
+        return this.device.createBindGroup({
+            layout: this.layout.layout,
+            entries: this.entries,
+        }) as any;
+    }
+}
+
+export { VERT_FRAG, VERT, FRAG };
+export { BindGroupLayoutBuilder };

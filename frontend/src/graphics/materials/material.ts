@@ -30,10 +30,12 @@ export class Material {
             32,
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         );
+
         this.materialBindGroup = driver.device.createBindGroup({
             layout: this.materialLayout,
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
         });
+
         this.textureBindGroup = driver.device.createBindGroup({
             layout: textureLayout,
             entries: [
@@ -41,6 +43,7 @@ export class Material {
                 { binding: 1, resource: (texture ?? defaultTexture).createView() },
             ],
         });
+
         this.upload();
     }
 

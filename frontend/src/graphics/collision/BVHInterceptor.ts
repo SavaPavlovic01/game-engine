@@ -2,7 +2,7 @@ import { Vec3 } from '../math/vec';
 import type { Model } from '../model';
 import { BVH } from './BVH';
 import type { Interceptor } from './interceptor';
-import { aabbOverlapsAABB, Ray } from './ray';
+import { aabbOverlapsAABB, Ray, type AABB } from './ray';
 
 export interface HitResult {
     model: Model;
@@ -33,5 +33,9 @@ export class BVHInterceptor implements Interceptor {
             .query(model.aabb)
             .filter((b) => b !== model)
             .map((b) => b as Model);
+    }
+
+    public getWorldBounds(): AABB {
+        return this.bvh.getWorldBounds()!;
     }
 }

@@ -65,6 +65,10 @@ export class BVH {
         return results.sort((a, b) => a.distance - b.distance);
     }
 
+    public getWorldBounds() {
+        return this.root?.aabb;
+    }
+
     private traverseRayAll(
         node: BVHNode | null,
         ray: Ray,
