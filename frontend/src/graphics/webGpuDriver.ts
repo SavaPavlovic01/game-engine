@@ -95,37 +95,56 @@ const VERT_FRAG = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
 const VERT = GPUShaderStage.VERTEX;
 const FRAG = GPUShaderStage.FRAGMENT;
 
+type TypedEntry<B extends number> = { binding: B } & (
+    | { buffer: GPUBufferBindingLayout }
+    | { sampler: GPUSamplerBindingLayout }
+    | { texture: GPUTextureBindingLayout }
+    | { storageTexture: GPUStorageTextureBindingLayout }
+) & { visibility: Visibility };
+
 type UnfilledBindings<
-    TEntries extends readonly GPUBindGroupLayoutEntry[],
+    TEntries extends readonly TypedEntry<number>[],
     TFilled extends number,
 > = Exclude<TEntries[number]['binding'], TFilled>;
 
-class BindGroupLayoutBuilder<TEntries extends readonly GPUBindGroupLayoutEntry[] = []> {
+class BindGroupLayoutBuilder<TEntries extends readonly TypedEntry<number>[] = []> {
     private readonly entries: GPUBindGroupLayoutEntry[] = [];
 
     constructor(private readonly device: GPUDevice) {}
 
-    private add<E extends GPUBindGroupLayoutEntry>(
+    private add<E extends TypedEntry<number>>(
         entry: E,
     ): BindGroupLayoutBuilder<readonly [...TEntries, E]> {
         this.entries.push(entry);
         return this as any;
     }
 
-    uniform(binding: number, visibility: Visibility, type: BufferBindingType = 'uniform') {
+    uniform<B extends number>(
+        binding: B,
+        visibility: Visibility,
+        type: BufferBindingType = 'uniform',
+    ) {
         return this.add({ binding, visibility, buffer: { type } });
     }
 
-    sampler(binding: number, visibility: Visibility, type: SamplerBindingType = 'filtering') {
+    sampler<B extends number>(
+        binding: B,
+        visibility: Visibility,
+        type: SamplerBindingType = 'filtering',
+    ) {
         return this.add({ binding, visibility, sampler: { type } });
     }
 
-    texture(binding: number, visibility: Visibility, sampleType: TextureSampleType = 'float') {
+    texture<B extends number>(
+        binding: B,
+        visibility: Visibility,
+        sampleType: TextureSampleType = 'float',
+    ) {
         return this.add({ binding, visibility, texture: { sampleType } });
     }
 
-    storageTexture(
-        binding: number,
+    storageTexture<B extends number>(
+        binding: B,
         visibility: Visibility,
         format: GPUTextureFormat,
         access: StorageTextureAccess = 'write-only',
@@ -139,7 +158,7 @@ class BindGroupLayoutBuilder<TEntries extends readonly GPUBindGroupLayoutEntry[]
     }
 }
 
-class TypedBindGroupLayout<TEntries extends readonly GPUBindGroupLayoutEntry[]> {
+export class TypedBindGroupLayout<TEntries extends readonly TypedEntry<number>[]> {
     constructor(
         private readonly device: GPUDevice,
         readonly layout: GPUBindGroupLayout,
@@ -151,8 +170,8 @@ class TypedBindGroupLayout<TEntries extends readonly GPUBindGroupLayoutEntry[]> 
     }
 }
 
-class BindGroupBuilder<
-    TEntries extends readonly GPUBindGroupLayoutEntry[],
+export class BindGroupBuilder<
+    TEntries extends readonly TypedEntry<number>[],
     TFilled extends number = never,
 > {
     private readonly entries: GPUBindGroupEntry[] = [];
@@ -168,7 +187,7 @@ class BindGroupBuilder<
         buffer: GPUBuffer,
     ): BindGroupBuilder<TEntries, TFilled | B> {
         this.entries.push({ binding, resource: { buffer } });
-        return this as any;
+        return this as unknown as BindGroupBuilder<TEntries, TFilled | B>;
     }
 
     sampler<B extends UnfilledBindings<TEntries, TFilled>>(
@@ -176,7 +195,7 @@ class BindGroupBuilder<
         sampler: GPUSampler,
     ): BindGroupBuilder<TEntries, TFilled | B> {
         this.entries.push({ binding, resource: sampler });
-        return this as any;
+        return this as unknown as BindGroupBuilder<TEntries, TFilled | B>;
     }
 
     textureView<B extends UnfilledBindings<TEntries, TFilled>>(
@@ -184,14 +203,14 @@ class BindGroupBuilder<
         view: GPUTextureView,
     ): BindGroupBuilder<TEntries, TFilled | B> {
         this.entries.push({ binding, resource: view });
-        return this as any;
+        return this as unknown as BindGroupBuilder<TEntries, TFilled | B>;
     }
 
-    build(): UnfilledBindings<TEntries, TFilled> extends never ? GPUBindGroup : never {
+    build(..._: UnfilledBindings<TEntries, TFilled> extends never ? [] : [never]): GPUBindGroup {
         return this.device.createBindGroup({
             layout: this.layout.layout,
             entries: this.entries,
-        }) as any;
+        });
     }
 }
 

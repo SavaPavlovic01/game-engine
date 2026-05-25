@@ -17,7 +17,7 @@ export class GameState {
     }
 
     public addPlayer(playerId: string) {
-        const player = new Cube(new Vec3(0, 0, 0));
+        const player = new Cube(this.scene.materials.default, new Vec3(0, 0, 0));
         this.players.set(playerId, player);
         this.scene.addObject(this.graphics.driver, player);
         this.scene.setObjectTranslate(

@@ -13,7 +13,14 @@ import type { Mesh } from './mesh';
 import type { Model } from './model';
 import { ShaderPipeline } from './shaderPipeline';
 import { DirectionalShadowMap, type ShadowCaster } from './shadowMap';
-import { BindGroupLayoutBuilder, FRAG, VERT_FRAG, WebGPUDriver } from './webGpuDriver';
+import {
+    BindGroupBuilder,
+    BindGroupLayoutBuilder,
+    FRAG,
+    TypedBindGroupLayout,
+    VERT_FRAG,
+    WebGPUDriver,
+} from './webGpuDriver';
 
 export class Scene {
     public camera: Camera;
