@@ -37,6 +37,14 @@ export class Vec3 {
         );
     }
 
+    public static ones() {
+        return new Vec3(1, 1, 1);
+    }
+
+    public static zeros() {
+        return new Vec3(0, 0, 0);
+    }
+
     public zeroIndex(index: number): Vec3 {
         if (index < 0 || index >= 3) throw new Error('out of bounds when you tried to zero vector');
         const v = new Vec3(this.X, this.Y, this.Z);

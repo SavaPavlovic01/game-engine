@@ -6,6 +6,7 @@ import { Material } from './graphics/materials/material.js';
 import { Vec3 } from './graphics/math/vec.js';
 import { Cube } from './graphics/objects/cube.js';
 import { LightCube } from './graphics/objects/lightCube.js';
+import { ObjModel } from './graphics/objects/objLoader.js';
 import { Ramp } from './graphics/objects/ramp.js';
 import { Scene } from './graphics/scene.js';
 import { ShaderPipeline } from './graphics/shaderPipeline.js';
@@ -62,6 +63,17 @@ window.onload = async () => {
     game.addPlayer();
     game.gameState.scene.addStaticObject(game.graphics.driver, floor);
     game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
+
+    const { mesh, aabb } = await ObjModel.fetch('test.obj');
+    const model = new ObjModel(
+        mesh,
+        aabb,
+        material,
+        new Vec3(-5, -3, -10),
+        Vec3.zeros(),
+        new Vec3(5, 5, 5),
+    );
+    game.gameState.scene.addObject(game.graphics.driver, model);
 
     //setInterval(() => {
     //function update() {
