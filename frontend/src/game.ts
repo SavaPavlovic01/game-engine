@@ -20,6 +20,7 @@ import type { Model } from './graphics/model.js';
 import { Material } from './graphics/materials/material.js';
 import { ShaderPipeline } from './graphics/shaderPipeline.js';
 import { test } from './generated/shaders.js';
+import { ObjModel } from './graphics/objects/objLoader.js';
 
 export class Game {
     public lobbyChannel?: LobbyChannel;
@@ -46,9 +47,17 @@ export class Game {
 
     constructor() {}
 
-    public addPlayer() {
+    public async addPlayer() {
         const controller = new CharacterController(this.gameState.scene.staticModelsBvh);
-        const player = new Cube(this.gameState.scene.materials.default, new Vec3(0, -0.3, -5));
+        const { mesh, aabb } = await ObjModel.fetch('test.obj');
+        const player = new ObjModel(
+            mesh,
+            aabb,
+            this.gameState.scene.materials.default,
+            new Vec3(-5, -3, -10),
+            Vec3.zeros(),
+            new Vec3(1, 1, 1),
+        );
         this.playerModels.push(player);
         this.playerControllers.push(controller);
 

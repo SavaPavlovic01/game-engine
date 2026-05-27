@@ -2,7 +2,7 @@ import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Vec3 } from '../math/vec';
-import { Mesh } from '../mesh';
+import { Mesh, meshLibrary } from '../mesh';
 import { Model } from '../model';
 
 export class Cube extends Model {
@@ -48,7 +48,7 @@ export class Cube extends Model {
         20, 21, 22, 20, 22, 23,
     ]);
 
-    public static readonly mesh: Mesh = new Mesh(Cube.cubeVertices, Cube.indices, STRIDE);
+    public static readonly mesh: Mesh = meshLibrary.get(this.cubeVertices, this.indices);
 
     constructor(
         material: Material,

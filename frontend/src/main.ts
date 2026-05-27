@@ -60,20 +60,9 @@ window.onload = async () => {
     game.gameState.scene.addStaticObject(game.graphics.driver, wall);
     // game.gameState.scene.addObject(game.graphics.driver, cube2);
     const floor = new Cube(material, new Vec3(0, -5, 0), new Vec3(0, 0, 0), new Vec3(50, 1, 50));
-    game.addPlayer();
+    await game.addPlayer();
     game.gameState.scene.addStaticObject(game.graphics.driver, floor);
     game.gameState.scene.addDirectionalLight(game.graphics.driver, dirLight);
-
-    const { mesh, aabb } = await ObjModel.fetch('test.obj');
-    const model = new ObjModel(
-        mesh,
-        aabb,
-        material,
-        new Vec3(-5, -3, -10),
-        Vec3.zeros(),
-        new Vec3(5, 5, 5),
-    );
-    game.gameState.scene.addObject(game.graphics.driver, model);
 
     //setInterval(() => {
     //function update() {

@@ -2,7 +2,7 @@ import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Vec3 } from '../math/vec';
-import { Mesh } from '../mesh';
+import { Mesh, meshLibrary } from '../mesh';
 import { Model } from '../model';
 
 export class Ramp extends Model {
@@ -40,7 +40,7 @@ export class Ramp extends Model {
         14, 15, 16, 14, 16, 17,
     ]);
 
-    public static readonly mesh: Mesh = new Mesh(Ramp.rampVertices, Ramp.indices, STRIDE);
+    public static readonly mesh: Mesh = meshLibrary.get(this.rampVertices, this.indices);
 
     constructor(
         material: Material,

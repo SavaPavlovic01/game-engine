@@ -2,7 +2,7 @@ import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Vec3 } from '../math/vec';
-import { Mesh } from '../mesh';
+import { Mesh, meshLibrary } from '../mesh';
 import { Model } from '../model';
 
 interface FaceVertex {
@@ -115,7 +115,7 @@ export class ObjLoader {
             indexData.push(vertexMap.get(key)!);
         }
 
-        return new Mesh(new Float32Array(vertexData), new Uint16Array(indexData), STRIDE);
+        return meshLibrary.get(new Float32Array(vertexData), new Uint16Array(indexData));
     }
 
     public static load(src: string): { mesh: Mesh; aabb: AABB } {
@@ -147,6 +147,9 @@ export class ObjModel extends Model {
         this.localaabb = aabb;
     }
 
+    // TODO: changing scale from 1,1,1 messes this up
+    // it would have to go up of down depending on the scale
+    // collison works funky
     public get center(): Vec3 {
         return new Vec3(
             this.translation.X + (this.localaabb.min.X + this.localaabb.max.X) / 2,
