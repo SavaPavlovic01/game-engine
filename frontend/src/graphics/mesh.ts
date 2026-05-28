@@ -38,6 +38,18 @@ export class Mesh {
     }
 }
 
+import { Material } from './materials/material';
+
+export class ModelPart extends Mesh {
+    public material: Material;
+    public slot?: number;
+
+    constructor(vertices: Float32Array, indices: Uint16Array, material: Material) {
+        super(vertices, indices, STRIDE);
+        this.material = material;
+    }
+}
+
 export class MeshLibrary {
     private meshes: Map<string, Mesh> = new Map();
 

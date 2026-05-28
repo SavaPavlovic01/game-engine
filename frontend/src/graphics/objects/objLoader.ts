@@ -2,7 +2,7 @@ import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Vec3 } from '../math/vec';
-import { Mesh, meshLibrary } from '../mesh';
+import { Mesh, meshLibrary, ModelPart } from '../mesh';
 import { Model } from '../model';
 
 interface FaceVertex {
@@ -11,11 +11,16 @@ interface FaceVertex {
     normalIdx: number | null;
 }
 
+interface ObjGroup {
+    materialName: string;
+    faces: FaceVertex[];
+}
+
 interface ObjData {
     positions: Vec3[];
     normals: Vec3[];
     uvs: [number, number][];
-    faces: FaceVertex[];
+    groups: ObjGroup[];
 }
 
 export class ObjLoader {
@@ -28,7 +33,6 @@ export class ObjLoader {
                 normalIdx: n && n !== '' ? +n - 1 : null,
             };
         });
-
         const tris: FaceVertex[] = [];
         for (let i = 1; i < verts.length - 1; i++) {
             tris.push(verts[0]!, verts[i]!, verts[i + 1]!);
@@ -40,7 +44,10 @@ export class ObjLoader {
         const positions: Vec3[] = [];
         const normals: Vec3[] = [];
         const uvs: [number, number][] = [];
-        const faces: FaceVertex[] = [];
+        const groups: ObjGroup[] = [];
+
+        let currentGroup: ObjGroup = { materialName: 'default', faces: [] };
+        groups.push(currentGroup);
 
         for (const rawLine of src.split('\n')) {
             const line = rawLine.replace(/\r/, '').trim();
@@ -57,13 +64,17 @@ export class ObjLoader {
                 case 'vt':
                     uvs.push([+parts[1]!, 1.0 - +parts[2]!]);
                     break;
+                case 'usemtl':
+                    currentGroup = { materialName: parts[1]!, faces: [] };
+                    groups.push(currentGroup);
+                    break;
                 case 'f':
-                    faces.push(...this.parseFace(parts.slice(1)));
+                    currentGroup.faces.push(...this.parseFace(parts.slice(1)));
                     break;
             }
         }
 
-        return { positions, normals, uvs, faces };
+        return { positions, normals, uvs, groups };
     }
 
     private static computeAABB(positions: Vec3[]): AABB {
@@ -89,7 +100,7 @@ export class ObjLoader {
         };
     }
 
-    private static buildMesh(obj: ObjData): Mesh {
+    private static buildPart(obj: ObjData, group: ObjGroup, material: Material): ModelPart {
         const fallbackNormal = new Vec3(0, 1, 0);
         const fallbackUV: [number, number] = [0, 0];
 
@@ -97,9 +108,8 @@ export class ObjLoader {
         const vertexData: number[] = [];
         const indexData: number[] = [];
 
-        for (const fv of obj.faces) {
+        for (const fv of group.faces) {
             const key = `${fv.posIdx}/${fv.uvIdx}/${fv.normalIdx}`;
-
             if (!vertexMap.has(key)) {
                 const pos = obj.positions[fv.posIdx] ?? new Vec3(0, 0, 0);
                 const normal =
@@ -108,42 +118,59 @@ export class ObjLoader {
                         : fallbackNormal;
                 const uv = fv.uvIdx !== null ? (obj.uvs[fv.uvIdx] ?? fallbackUV) : fallbackUV;
 
-                vertexMap.set(key, vertexData.length / STRIDE);
+                vertexMap.set(key, vertexData.length / 8);
                 vertexData.push(pos.X, pos.Y, pos.Z, normal.X, normal.Y, normal.Z, uv[0], uv[1]);
             }
-
             indexData.push(vertexMap.get(key)!);
         }
 
-        return meshLibrary.get(new Float32Array(vertexData), new Uint16Array(indexData));
+        return new ModelPart(new Float32Array(vertexData), new Uint16Array(indexData), material);
     }
 
-    public static load(src: string): { mesh: Mesh; aabb: AABB } {
+    public static load(
+        src: string,
+        materials: Map<string, Material> | Material[],
+        fallbackMaterial: Material,
+    ): { parts: ModelPart[]; aabb: AABB } {
         const obj = this.parse(src);
-        const mesh = this.buildMesh(obj);
         const aabb = this.computeAABB(obj.positions);
-        return { mesh, aabb };
+        const groups = obj.groups.filter((g) => g.faces.length > 0);
+
+        const parts = groups.map((g, i) => {
+            let material: Material;
+            if (Array.isArray(materials)) {
+                material = materials[i] ?? fallbackMaterial;
+            } else {
+                material = materials.get(g.materialName) ?? fallbackMaterial;
+            }
+            return this.buildPart(obj, g, material);
+        });
+
+        return { parts, aabb };
     }
 }
 
 export class ObjModel extends Model {
     public readonly localaabb: AABB;
 
-    public static async fetch(url: string): Promise<{ mesh: Mesh; aabb: AABB }> {
+    public static async fetch(
+        url: string,
+        materialMap: Map<string, Material> | Material[],
+        fallbackMaterial: Material,
+    ): Promise<{ parts: ModelPart[]; aabb: AABB }> {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Failed to load OBJ: ${url}`);
-        return ObjLoader.load(await res.text());
+        return ObjLoader.load(await res.text(), materialMap, fallbackMaterial);
     }
 
     constructor(
-        mesh: Mesh,
+        parts: ModelPart[],
         aabb: AABB,
-        material: Material,
-        translate = new Vec3(0, 0, 0),
-        rotate = new Vec3(0, 0, 0),
-        scale = new Vec3(1, 1, 1),
+        translate: Vec3 = new Vec3(0, 0, 0),
+        rotate: Vec3 = new Vec3(0, 0, 0),
+        scale: Vec3 = new Vec3(1, 1, 1),
     ) {
-        super(translate, rotate, scale, mesh, material);
+        super(translate, rotate, scale, parts);
         this.localaabb = aabb;
     }
 

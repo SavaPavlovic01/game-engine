@@ -48,19 +48,32 @@ export class Game {
     constructor() {}
 
     public async addPlayer() {
+        const texture = await this.gameState.scene.materials.loadTexture('tex.avif');
+
+        const wallMat = this.gameState.scene.materials.getWithDefaultShader(
+            {
+                baseColor: [1, 0.2, 0.9],
+                metallic: 0.1,
+                roughness: 0.1,
+            },
+            texture,
+        );
+
         const controller = new CharacterController(this.gameState.scene.staticModelsBvh);
-        const { mesh, aabb } = await ObjModel.fetch('test.obj');
-        const player = new ObjModel(
-            mesh,
-            aabb,
+        const { parts, aabb } = await ObjModel.fetch(
+            'test.obj',
+            [wallMat, wallMat, wallMat],
             this.gameState.scene.materials.default,
+        );
+        const player = new ObjModel(
+            parts,
+            aabb,
             new Vec3(-5, -3, -10),
             Vec3.zeros(),
-            new Vec3(1, 1, 1),
+            new Vec3(1, 1, 1).scale(5),
         );
         this.playerModels.push(player);
         this.playerControllers.push(controller);
-
         this.gameState.scene.addObject(this.graphics.driver, player);
     }
 

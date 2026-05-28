@@ -2,7 +2,7 @@ import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Vec3 } from '../math/vec';
-import { Mesh, meshLibrary } from '../mesh';
+import { Mesh, meshLibrary, ModelPart } from '../mesh';
 import { Model } from '../model';
 
 export class Ramp extends Model {
@@ -48,7 +48,7 @@ export class Ramp extends Model {
         rotate: Vec3 = new Vec3(0, 0, 0),
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
-        super(translate, rotate, scale, Ramp.mesh, material);
+        super(translate, rotate, scale, [new ModelPart(Ramp.rampVertices, Ramp.indices, material)]);
     }
 
     public get center(): Vec3 {

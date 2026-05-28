@@ -9,9 +9,11 @@ export class StaticBVH {
     private triangles: Triangle[] = [];
 
     public addModel(model: Model) {
-        this.triangles = this.triangles.concat(
-            Triangle.extractFromMesh(model.mesh, model.getModelMatrix()),
-        );
+        for (const part of model.parts) {
+            this.triangles = this.triangles.concat(
+                Triangle.extractFromMesh(part, model.getModelMatrix()),
+            );
+        }
         this.bvh.build(this.triangles);
     }
 
