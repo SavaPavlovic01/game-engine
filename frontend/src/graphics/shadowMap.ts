@@ -1,10 +1,14 @@
 import { Mat4 } from './math/mat';
 import { Vec3 } from './math/vec';
 import type { AABB } from './collision/ray';
-import type { WebGPUDriver } from './webGpuDriver';
+import { BindGroupLayoutBuilder, VERT, type WebGPUDriver } from './webGpuDriver';
 import type { Mesh } from './mesh';
 import type { InstanceBuffer } from './InstanceBuffer';
-import { MESH_VERTEX_LAYOUT, INSTANCE_VERTEX_LAYOUT } from './shaderPipeline';
+import {
+    MESH_VERTEX_LAYOUT,
+    INSTANCE_VERTEX_LAYOUT,
+    RenderPipelineBuilder,
+} from './shaderPipeline';
 
 const SHADOW_WGSL = `
 @group(0) @binding(0) var<uniform> lightViewProj: mat4x4<f32>;
@@ -54,38 +58,27 @@ export class DirectionalShadowMap {
             magFilter: 'linear',
             minFilter: 'linear',
         });
+
         this.lightViewProjBuffer = driver.makeBuffer(
             64,
             GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         );
 
-        const bindGroupLayout = driver.device.createBindGroupLayout({
-            entries: [
-                { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-            ],
+        const layout = new BindGroupLayoutBuilder(driver.device).uniform(0, VERT).build();
+
+        this.bindGroup = layout.createBindGroup().buffer(0, this.lightViewProjBuffer).build();
+
+        const pipelineLayout = driver.device.createPipelineLayout({
+            bindGroupLayouts: [layout.layout],
         });
-        this.bindGroup = driver.device.createBindGroup({
-            layout: bindGroupLayout,
-            entries: [{ binding: 0, resource: { buffer: this.lightViewProjBuffer } }],
-        });
-        const module = driver.device.createShaderModule({ code: SHADOW_WGSL });
-        this.pipeline = driver.device.createRenderPipeline({
-            layout: driver.device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
-            vertex: {
-                module,
-                entryPoint: 'vs_main',
-                buffers: [MESH_VERTEX_LAYOUT, INSTANCE_VERTEX_LAYOUT],
-            },
-            primitive: { topology: 'triangle-list', cullMode: 'front' },
-            depthStencil: {
-                depthWriteEnabled: true,
-                depthCompare: 'less',
-                format: 'depth32float',
-                depthBias: 0,
-                depthBiasSlopeScale: 0.0,
-                depthBiasClamp: 0.0,
-            },
-        });
+
+        this.pipeline = new RenderPipelineBuilder(driver, SHADOW_WGSL, pipelineLayout)
+            .cullMode('front')
+            .depthCompare('less')
+            .vertexBuffers([MESH_VERTEX_LAYOUT, INSTANCE_VERTEX_LAYOUT])
+            .depthFormat('depth32float')
+            .noFragment()
+            .build();
     }
 
     public buildLightMatrix(direction: Vec3, sceneBounds: AABB): Mat4 {

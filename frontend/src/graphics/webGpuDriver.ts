@@ -152,6 +152,10 @@ class BindGroupLayoutBuilder<TEntries extends readonly TypedEntry<number>[] = []
         return this.add({ binding, visibility, storageTexture: { format, access } });
     }
 
+    cubeTexture<B extends number>(binding: B, visibility: Visibility) {
+        return this.add({ binding, visibility, texture: { viewDimension: 'cube' } });
+    }
+
     build(): TypedBindGroupLayout<TEntries> {
         const layout = this.device.createBindGroupLayout({ entries: this.entries });
         return new TypedBindGroupLayout(this.device, layout, this.entries as unknown as TEntries);

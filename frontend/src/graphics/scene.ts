@@ -13,6 +13,7 @@ import type { Mesh, ModelPart } from './mesh';
 import type { Model } from './model';
 import { ShaderPipeline } from './shaderPipeline';
 import { DirectionalShadowMap, type ShadowCaster } from './shadowMap';
+import type { Skybox } from './skybox';
 import {
     BindGroupBuilder,
     BindGroupLayoutBuilder,
@@ -54,6 +55,8 @@ export class Scene {
     public staticModelsBvh: StaticBVH = new StaticBVH();
 
     public materials!: MaterialLibrary;
+
+    public skybox?: Skybox;
 
     constructor(cameraPos: Vec3 = new Vec3(0, 0, 0), cameraRot: Vec3 = new Vec3(0, 0, 0)) {
         this.camera = new Camera(cameraPos, cameraRot);
@@ -172,7 +175,8 @@ export class Scene {
         if (this.models.length === 0) return;
 
         const vp = this.camera.getProjection().matmul(this.camera.getView());
-        driver.device.queue.writeBuffer(this.vpBuffer, 0, vp.toColumnMajor());
+        const vpRaw = vp.toColumnMajor();
+        driver.device.queue.writeBuffer(this.vpBuffer, 0, vpRaw);
         driver.device.queue.writeBuffer(this.cameraPosBuffer, 0, this.camera.position.values);
 
         const encoder = driver.device.createCommandEncoder();
@@ -207,6 +211,8 @@ export class Scene {
                 depthStoreOp: 'store',
             },
         });
+
+        this.skybox?.render(driver, pass, vpRaw);
 
         let currentShader: ShaderPipeline | null = null;
         for (const { part, drawBuffer, drawArgsBuffer } of drawCalls) {

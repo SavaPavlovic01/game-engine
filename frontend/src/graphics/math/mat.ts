@@ -252,4 +252,8 @@ export class Mat4 {
             ]),
         );
     }
+
+    public clone(): Mat4 {
+        return new Mat4(new Float32Array(this.values));
+    }
 }

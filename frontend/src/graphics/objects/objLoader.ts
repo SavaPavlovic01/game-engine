@@ -178,11 +178,11 @@ export class ObjModel extends Model {
     // it would have to go up of down depending on the scale
     // collison works funky
     public get center(): Vec3 {
-        return new Vec3(
-            this.translation.X + (this.localaabb.min.X + this.localaabb.max.X) / 2,
-            this.translation.Y + (this.localaabb.min.Y + this.localaabb.max.Y) / 2,
-            this.translation.Z + (this.localaabb.min.Z + this.localaabb.max.Z) / 2,
-        );
+        const cx = (this.localaabb.min.X + this.localaabb.max.X) / 2;
+        const cy = (this.localaabb.min.Y + this.localaabb.max.Y) / 2;
+        const cz = (this.localaabb.min.Z + this.localaabb.max.Z) / 2;
+
+        return this.getModelMatrix().transformPoint(new Vec3(cx, cy, cz));
     }
 
     public getLocalAABB(): AABB {

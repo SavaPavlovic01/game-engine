@@ -10,6 +10,7 @@ import { ObjModel } from './graphics/objects/objLoader.js';
 import { Ramp } from './graphics/objects/ramp.js';
 import { Scene } from './graphics/scene.js';
 import { ShaderPipeline } from './graphics/shaderPipeline.js';
+import { Skybox } from './graphics/skybox.js';
 import { InputHandler } from './inputHandler.js';
 
 var game: Game;
@@ -45,6 +46,18 @@ window.onload = async () => {
         },
         texture,
     );
+
+    const skybox = new Skybox();
+    await skybox.init(game.graphics.driver, [
+        'sky/px.png', // +X
+        'sky/nx.png', // -X
+        'sky/py.png', // +Y
+        'sky/ny.png', // -Y
+        'sky/pz.png', // +Z
+        'sky/nz.png', // -Z
+    ]);
+
+    game.gameState.scene.skybox = skybox;
 
     const cube = new Cube(material);
     const cube2 = new Cube(material, new Vec3(1, 0, 0));
