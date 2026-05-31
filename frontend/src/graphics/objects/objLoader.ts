@@ -100,7 +100,7 @@ export class ObjLoader {
         };
     }
 
-    private static buildPart(obj: ObjData, group: ObjGroup, material: Material): ModelPart {
+    private static buildPart(obj: ObjData, group: ObjGroup, materialId: string): ModelPart {
         const fallbackNormal = new Vec3(0, 1, 0);
         const fallbackUV: [number, number] = [0, 0];
 
@@ -124,26 +124,26 @@ export class ObjLoader {
             indexData.push(vertexMap.get(key)!);
         }
 
-        return new ModelPart(new Float32Array(vertexData), new Uint16Array(indexData), material);
+        return new ModelPart(new Float32Array(vertexData), new Uint16Array(indexData), materialId);
     }
 
     public static load(
         src: string,
-        materials: Map<string, Material> | Material[],
-        fallbackMaterial: Material,
+        materials: Map<string, string> | string[],
+        fallbackMaterial: string,
     ): { parts: ModelPart[]; aabb: AABB } {
         const obj = this.parse(src);
         const aabb = this.computeAABB(obj.positions);
         const groups = obj.groups.filter((g) => g.faces.length > 0);
 
         const parts = groups.map((g, i) => {
-            let material: Material;
+            let materialId: string;
             if (Array.isArray(materials)) {
-                material = materials[i] ?? fallbackMaterial;
+                materialId = materials[i] ?? fallbackMaterial;
             } else {
-                material = materials.get(g.materialName) ?? fallbackMaterial;
+                materialId = materials.get(g.materialName) ?? fallbackMaterial;
             }
-            return this.buildPart(obj, g, material);
+            return this.buildPart(obj, g, materialId);
         });
 
         return { parts, aabb };
@@ -155,8 +155,8 @@ export class ObjModel extends Model {
 
     public static async fetch(
         url: string,
-        materialMap: Map<string, Material> | Material[],
-        fallbackMaterial: Material,
+        materialMap: Map<string, string> | string[],
+        fallbackMaterial: string,
     ): Promise<{ parts: ModelPart[]; aabb: AABB }> {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Failed to load OBJ: ${url}`);

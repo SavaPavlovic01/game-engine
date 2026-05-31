@@ -51,12 +51,14 @@ export class Cube extends Model {
     public static readonly mesh: Mesh = meshLibrary.get(this.cubeVertices, this.indices);
 
     constructor(
-        material: Material,
+        materialId: string,
         translate: Vec3 = new Vec3(0, 0, 0),
         rotate: Vec3 = new Vec3(0, 0, 0),
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
-        super(translate, rotate, scale, [new ModelPart(Cube.cubeVertices, Cube.indices, material)]);
+        super(translate, rotate, scale, [
+            new ModelPart(Cube.cubeVertices, Cube.indices, materialId),
+        ]);
     }
 
     public get center(): Vec3 {

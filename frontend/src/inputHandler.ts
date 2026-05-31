@@ -109,13 +109,9 @@ export class InputHandler {
         }
 
         const action = new MoveAction(this.game.tick, dx, dy);
-        const model = this.game.playerModels[0]!;
+        const model = this.game.players[0]!.model;
         console.log(dy, 0, dx);
-        this.game.gameState.scene.offsetObject(
-            this.game.graphics.driver,
-            model,
-            new Vec3(-py, 0, -px),
-        );
+        this.game.gameState.moveModel(model, model.translation.add(new Vec3(-py, 0, -px)));
         action.invoke(this.game);
         this.game.actionBuffer.push(action);
     };

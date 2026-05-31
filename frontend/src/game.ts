@@ -1,26 +1,21 @@
-import {
-    LobbyOps,
-    type ChannelOps,
-    type LobbyChannelMsg,
-    type LobbyRequestResponse,
-} from './channel/channels.js';
 import type { GameStateChannel } from './channel/gameStateChannel.js';
 import { Graphics } from './graphics/graphics.js';
 import { Vec3 } from './graphics/math/vec.js';
-import { Cube } from './graphics/objects/cube.js';
-import { Scene } from './graphics/scene.js';
+import { MaterialId } from './graphics/materials/material.js';
+import { CharacterController } from './graphics/collision/CharacterController.js';
+import { ObjModel } from './graphics/objects/objLoader.js';
+import type { Model } from './graphics/model.js';
+import { Renderer } from './graphics/renderer.js';
+import { GameState } from './gameState.js';
 import { Lobby } from './lobby.js';
 import { LobbyChannel } from './channel/lobbyChannel.js';
-import { WebRtcHandler } from './webrtcHandler.js';
-import { GameState } from './gameState.js';
-import { TICK_PERIOD } from './constants.js';
 import { ActionBuffer } from './actions/actionBuffer.js';
-import { CharacterController } from './graphics/collision/CharacterController.js';
-import type { Model } from './graphics/model.js';
-import { Material } from './graphics/materials/material.js';
-import { ShaderPipeline } from './graphics/shaderPipeline.js';
-import { test } from './generated/shaders.js';
-import { ObjModel } from './graphics/objects/objLoader.js';
+import { TICK_PERIOD } from './constants.js';
+
+interface Player {
+    model: Model;
+    controller: CharacterController;
+}
 
 export class Game {
     public lobbyChannel?: LobbyChannel;
@@ -28,72 +23,31 @@ export class Game {
 
     public graphics!: Graphics;
     public canvas!: HTMLCanvasElement;
+    public renderer!: Renderer;
 
     public gameState!: GameState;
-
     public lobby?: Lobby;
     public playerId?: string;
 
     public tick: number = 0;
-    private lastTime: number = 0;
+    private lastTime: number = -1;
     private accumulator: number = 0;
 
     public actionBuffer: ActionBuffer = new ActionBuffer();
-
     public gameStarted: boolean = false;
 
-    public playerControllers: CharacterController[] = [];
-    public playerModels: Model[] = [];
+    public players: Player[] = [];
 
-    constructor() {}
+    private constructor() {}
 
-    public async addPlayer() {
-        const texture = await this.gameState.scene.materials.loadTexture('tex.avif');
-
-        const wallMat = this.gameState.scene.materials.getWithDefaultShader(
-            {
-                baseColor: [1, 0.2, 0.9],
-                metallic: 0.1,
-                roughness: 0.1,
-            },
-            texture,
-        );
-
-        const controller = new CharacterController(this.gameState.scene.staticModelsBvh);
-        const { parts, aabb } = await ObjModel.fetch(
-            'test.obj',
-            [wallMat, wallMat, wallMat],
-            this.gameState.scene.materials.default,
-        );
-        const player = new ObjModel(
-            parts,
-            aabb,
-            new Vec3(-5, -3, -10),
-            Vec3.zeros(),
-            new Vec3(1, 1, 1).scale(5),
-        );
-        this.playerModels.push(player);
-        this.playerControllers.push(controller);
-        this.gameState.scene.addObject(this.graphics.driver, player);
-    }
-
-    public static async create() {
+    public static async create(): Promise<Game> {
         const game = new Game();
         game.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         game.graphics = await Graphics.create(game.canvas);
-        game.gameState = new GameState(game.graphics);
-
+        game.renderer = new Renderer(game.graphics.driver);
+        game.gameState = new GameState(game.renderer);
         game.lobbyChannel = await LobbyChannel.create(game);
-
         return game;
-    }
-
-    async init() {
-        this.canvas = document.getElementById('canvas') as HTMLCanvasElement;
-        this.graphics = await Graphics.create(this.canvas);
-        this.gameState = new GameState(this.graphics);
-
-        this.lobbyChannel = await LobbyChannel.create(this);
     }
 
     public setLobby(lobby: Lobby) {
@@ -104,34 +58,59 @@ export class Game {
         this.dataChannel = channel;
     }
 
+    public async addPlayer() {
+        await this.registerPlayerMaterials();
+
+        const { parts, aabb } = await ObjModel.fetch(
+            'test.obj',
+            ['player-skin', 'player-skin', 'player-skin'],
+            MaterialId.Default,
+        );
+
+        const model = new ObjModel(
+            parts,
+            aabb,
+            new Vec3(-5, -3, -10),
+            Vec3.zeros(),
+            new Vec3(1, 1, 1).scale(5),
+        );
+
+        const controller = new CharacterController(this.gameState.scene.staticModelsBvh);
+
+        this.players.push({ model, controller });
+        this.gameState.addModel(model);
+    }
+
+    private async registerPlayerMaterials() {
+        if (this.renderer.materials.has('player-skin')) return;
+
+        const texture = await this.renderer.materials.loadTexture('tex.avif');
+        this.renderer.materials.register(
+            'player-skin',
+            { baseColor: [1, 0.2, 0.9], metallic: 0.1, roughness: 0.1 },
+            texture,
+        );
+    }
+
     public startRender() {
         this.lastTime = -1;
         requestAnimationFrame(this.frame);
     }
 
-    public frame = async (now: number) => {
-        if (!this.gameState) return;
-
+    private frame = (now: number) => {
         if (this.lastTime === -1) {
             this.lastTime = now;
             requestAnimationFrame(this.frame);
             return;
         }
 
-        await this.gameState.scene.renderScene(this.graphics.driver);
         const delta = now - this.lastTime;
         this.lastTime = now;
+
+        this.update(delta);
+        this.renderer.render(this.gameState.scene);
+
         this.accumulator += delta;
-
-        if (this.playerModels.length > 0) {
-            const player = this.playerModels[0];
-            const controller = this.playerControllers[0]!;
-            const pos = controller.update(player!, delta / 1000);
-
-            console.log(`moving player ${pos}`);
-            this.gameState.scene.setObjectTranslate(this.graphics.driver, player!, pos);
-        }
-
         while (this.accumulator >= TICK_PERIOD) {
             this.tick++;
             this.accumulator -= TICK_PERIOD;
@@ -140,22 +119,28 @@ export class Game {
         requestAnimationFrame(this.frame);
     };
 
+    private update(delta: number) {
+        const dt = delta / 1000;
+        for (const { model, controller } of this.players) {
+            const newPos = controller.update(model, dt);
+            this.gameState.moveModel(model, newPos);
+        }
+    }
+
     public movePlayer(dirX: number, dirY: number) {
         this.gameState.offsetPlayer(this.playerId!, new Vec3(-dirY, 0, -dirX));
-        if (!this.dataChannel || !this.dataChannel.channel || !this.playerId) {
-            console.log('not ready to send');
-            return;
-        }
 
-        const moveActionMsg = {
-            playerId: this.playerId,
-            actionType: 0,
-            tick: this.tick,
-            dirx: dirX,
-            diry: dirY,
-        };
+        if (!this.dataChannel?.channel || !this.playerId) return;
 
-        this.dataChannel.channel.send(JSON.stringify(moveActionMsg));
+        this.dataChannel.channel.send(
+            JSON.stringify({
+                playerId: this.playerId,
+                actionType: 0,
+                tick: this.tick,
+                dirx: dirX,
+                diry: dirY,
+            }),
+        );
     }
 
     public setPlayerRotate(dirX: number, dirY: number) {
@@ -165,18 +150,16 @@ export class Game {
     public rotatePlayer(dirX: number, dirY: number) {
         this.gameState.rotatePlayer(this.playerId!, new Vec3(dirX, dirY, 0));
 
-        // TODO: move this shit out to the action, when we invoke it send the message
         const rot = this.gameState.players.get(this.playerId!)?.rotation;
-
-        const rotatePlayerMsg = {
-            playerId: this.playerId,
-            actionType: 1,
-            tick: this.tick,
-            xrot: rot?.X,
-            yrot: rot?.Y,
-        };
-        //console.log('sending this', rotatePlayerMsg);
-
-        this.dataChannel?.channel.send(JSON.stringify(rotatePlayerMsg));
+        // TODO: move to action system
+        this.dataChannel?.channel.send(
+            JSON.stringify({
+                playerId: this.playerId,
+                actionType: 1,
+                tick: this.tick,
+                xrot: rot?.X,
+                yrot: rot?.Y,
+            }),
+        );
     }
 }

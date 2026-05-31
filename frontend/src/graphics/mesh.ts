@@ -38,15 +38,13 @@ export class Mesh {
     }
 }
 
-import { Material } from './materials/material';
-
 export class ModelPart extends Mesh {
-    public material: Material;
+    public materialId: string;
     public slot?: number;
 
-    constructor(vertices: Float32Array, indices: Uint16Array, material: Material) {
+    constructor(vertices: Float32Array, indices: Uint16Array, materialId: string) {
         super(vertices, indices, STRIDE);
-        this.material = material;
+        this.materialId = materialId;
     }
 }
 

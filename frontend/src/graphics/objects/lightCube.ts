@@ -7,7 +7,7 @@ export class LightCube extends Cube implements LightSource {
     public lightSlot!: number;
 
     constructor(
-        material: Material,
+        materialId: string,
         translate: Vec3 = new Vec3(0, 0, 0),
         rotate: Vec3 = new Vec3(0, 0, 0),
         scale: Vec3 = new Vec3(1, 1, 1),
@@ -15,7 +15,7 @@ export class LightCube extends Cube implements LightSource {
         public intensity: number = 1,
         public radius: number = 100,
     ) {
-        super(material, translate, rotate, scale);
+        super(materialId, translate, rotate, scale);
     }
 
     public getLightData(): LightData {

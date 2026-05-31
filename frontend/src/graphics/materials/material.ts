@@ -7,6 +7,10 @@ export interface MaterialUniforms {
     metallic: number;
 }
 
+export const MaterialId = {
+    Default: 'default',
+} as const;
+
 export class Material {
     private uniformBuffer: GPUBuffer;
     private materialBindGroup: GPUBindGroup;
@@ -67,7 +71,6 @@ export class Material {
 
 export class MaterialLibrary {
     private cache: Map<string, Material> = new Map();
-    private _default?: Material;
     private defaultTexture: GPUTexture;
     private sampler: GPUSampler;
 
@@ -83,14 +86,12 @@ export class MaterialLibrary {
             format: 'rgba8unorm',
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
         });
-
         driver.device.queue.writeTexture(
             { texture: this.defaultTexture },
             whitePixel,
             { bytesPerRow: 4 },
             [1, 1],
         );
-
         this.sampler = driver.device.createSampler({
             magFilter: 'linear',
             minFilter: 'linear',
@@ -98,40 +99,42 @@ export class MaterialLibrary {
             addressModeU: 'repeat',
             addressModeV: 'repeat',
         });
+
+        this.register(MaterialId.Default, {
+            baseColor: [1.0, 0.2, 0.6],
+            roughness: 0.5,
+            metallic: 0.0,
+        });
     }
 
-    public get default(): Material {
-        if (!this._default) {
-            this._default = this.get(this.defaultShader, {
-                baseColor: [1.0, 0.2, 0.6],
-                roughness: 0.5,
-                metallic: 0.0,
-            });
-        }
-        return this._default;
+    public register(
+        id: string,
+        uniforms: MaterialUniforms,
+        texture?: GPUTexture,
+        shader?: ShaderPipeline,
+    ): void {
+        const material = new Material(
+            this.driver,
+            shader ?? this.defaultShader,
+            this.materialLayout,
+            this.textureLayout,
+            this.sampler,
+            this.defaultTexture,
+            texture,
+            uniforms,
+        );
+        this.cache.set(id, material);
     }
 
-    public get(shader: ShaderPipeline, uniforms: MaterialUniforms, texture?: GPUTexture): Material {
-        const key = `${shader.name}:${uniforms.baseColor}:${uniforms.roughness}:${uniforms.metallic}:${texture ?? 'default'}`;
-        let material = this.cache.get(key);
-        if (!material) {
-            material = new Material(
-                this.driver,
-                shader,
-                this.materialLayout,
-                this.textureLayout,
-                this.sampler,
-                this.defaultTexture,
-                texture,
-                uniforms,
-            );
-            this.cache.set(key, material);
-        }
+    public has(id: string): boolean {
+        return this.cache.has(id);
+    }
+
+    // Resolve a materialId to a Material. Falls back to default if not found.
+    public resolve(id: string): Material {
+        const material = this.cache.get(id) ?? this.cache.get(MaterialId.Default);
+        if (!material) throw new Error('MaterialLibrary: default material not registered');
         return material;
-    }
-
-    public getWithDefaultShader(uniforms: MaterialUniforms, texture?: GPUTexture): Material {
-        return this.get(this.defaultShader, uniforms, texture);
     }
 
     public async loadTexture(url: string): Promise<GPUTexture> {

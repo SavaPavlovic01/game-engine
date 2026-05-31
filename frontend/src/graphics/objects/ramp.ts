@@ -43,7 +43,7 @@ export class Ramp extends Model {
     public static readonly mesh: Mesh = meshLibrary.get(this.rampVertices, this.indices);
 
     constructor(
-        material: Material,
+        material: string,
         translate: Vec3 = new Vec3(0, 0, 0),
         rotate: Vec3 = new Vec3(0, 0, 0),
         scale: Vec3 = new Vec3(1, 1, 1),
