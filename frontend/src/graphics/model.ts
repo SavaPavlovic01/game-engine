@@ -4,13 +4,14 @@ import type { Bounded } from './collision/BVH';
 import { Ray, type AABB } from './collision/ray';
 import { Material } from './materials/material';
 import { Mat4 } from './math/mat';
+import type { Quat } from './math/quat';
 import { Vec3 } from './math/vec';
 import { Mesh, ModelPart } from './mesh';
 import type { WebGPUDriver } from './webGpuDriver';
 
 export abstract class Model implements Bounded {
     public translation: Vec3;
-    public rotation: Vec3;
+    public rotation: Quat;
     private scale: Vec3;
 
     private modelMatrix: Mat4;
@@ -22,7 +23,7 @@ export abstract class Model implements Bounded {
 
     public parts: ModelPart[];
 
-    constructor(translate: Vec3, rotate: Vec3, scale: Vec3, parts: ModelPart[]) {
+    constructor(translate: Vec3, rotate: Quat, scale: Vec3, parts: ModelPart[]) {
         this.translation = translate;
         this.rotation = rotate;
         this.scale = scale;
@@ -115,7 +116,7 @@ export abstract class Model implements Bounded {
 
     private buildModelMatrix(): Mat4 {
         return Mat4.translationMatrix(this.translation)
-            .matmul(Mat4.rotationMatrix(this.rotation))
+            .matmul(this.rotation.toMat4())
             .matmul(Mat4.scaleMatrix(this.scale));
     }
 
@@ -129,13 +130,13 @@ export abstract class Model implements Bounded {
         this.modelMatrix = this.buildModelMatrix();
     }
 
-    public setRotate(rot: Vec3) {
+    public setRotate(rot: Quat) {
         this.rotation = rot;
         this.modelMatrix = this.buildModelMatrix();
     }
 
-    public rotate(dir: Vec3) {
-        this.rotation = this.rotation.add(dir);
+    public rotate(delta: Quat) {
+        this.rotation = delta.mul(this.rotation);
         this.modelMatrix = this.buildModelMatrix();
     }
 

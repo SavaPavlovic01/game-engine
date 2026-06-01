@@ -11,6 +11,7 @@ import { Lobby } from './lobby.js';
 import { LobbyChannel } from './channel/lobbyChannel.js';
 import { ActionBuffer } from './actions/actionBuffer.js';
 import { TICK_PERIOD } from './constants.js';
+import { Quat } from './graphics/math/quat.js';
 
 interface Player {
     model: Model;
@@ -71,7 +72,7 @@ export class Game {
             parts,
             aabb,
             new Vec3(-5, -3, -10),
-            Vec3.zeros(),
+            Quat.identity(),
             new Vec3(1, 1, 1).scale(5),
         );
 
@@ -144,11 +145,11 @@ export class Game {
     }
 
     public setPlayerRotate(dirX: number, dirY: number) {
-        this.gameState.setPlayerRotate(this.playerId!, new Vec3(dirX, dirY, 0));
+        this.gameState.setPlayerRotate(this.playerId!, Quat.fromEuler(new Vec3(dirX, dirY, 0)));
     }
 
     public rotatePlayer(dirX: number, dirY: number) {
-        this.gameState.rotatePlayer(this.playerId!, new Vec3(dirX, dirY, 0));
+        this.gameState.rotatePlayer(this.playerId!, Quat.fromEuler(new Vec3(dirX, dirY, 0)));
 
         const rot = this.gameState.players.get(this.playerId!)?.rotation;
         // TODO: move to action system

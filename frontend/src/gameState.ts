@@ -4,6 +4,7 @@ import { Cube } from './graphics/objects/cube.js';
 import { Scene } from './graphics/scene.js';
 import { Vec3 } from './graphics/math/vec.js';
 import type { IRenderer } from './graphics/renderer';
+import type { Quat } from './graphics/math/quat.js';
 
 export class GameState {
     public scene: Scene;
@@ -15,8 +16,6 @@ export class GameState {
         this.renderer = renderer;
         this.scene = new Scene(new Vec3(10, -2, -4), new Vec3(0, -1.5, 0));
     }
-
-    // --- Generic model helpers ---
 
     public addModel(model: Model) {
         this.scene.addObject(model);
@@ -48,17 +47,15 @@ export class GameState {
         this.renderer.syncTransform(model);
     }
 
-    private rotate(model: Model, rot: Vec3) {
+    private rotate(model: Model, rot: Quat) {
         model.rotate(rot);
         this.renderer.syncTransform(model);
     }
 
-    private setRotate(model: Model, rot: Vec3) {
+    private setRotate(model: Model, rot: Quat) {
         model.setRotate(rot);
         this.renderer.syncTransform(model);
     }
-
-    // --- Player API ---
 
     public addPlayer(playerId: string, materialId: string = MaterialId.Default) {
         const player = new Cube(materialId, new Vec3(0, 0, 0));
@@ -86,13 +83,13 @@ export class GameState {
         this.translate(player, offset);
     }
 
-    public rotatePlayer(playerId: string, rot: Vec3) {
+    public rotatePlayer(playerId: string, rot: Quat) {
         const player = this.getPlayer(playerId);
         if (!player) return;
         this.rotate(player, rot);
     }
 
-    public setPlayerRotate(playerId: string, rot: Vec3) {
+    public setPlayerRotate(playerId: string, rot: Quat) {
         const player = this.getPlayer(playerId);
         if (!player) return;
         this.setRotate(player, rot);

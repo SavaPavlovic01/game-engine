@@ -1,5 +1,6 @@
 import type { LightData, LightSource } from '../lightSource';
 import type { Material } from '../materials/material';
+import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
 import { Cube } from './cube';
 
@@ -9,7 +10,7 @@ export class LightCube extends Cube implements LightSource {
     constructor(
         materialId: string,
         translate: Vec3 = new Vec3(0, 0, 0),
-        rotate: Vec3 = new Vec3(0, 0, 0),
+        rotate: Quat = Quat.identity(),
         scale: Vec3 = new Vec3(1, 1, 1),
         public lightColor: Vec3 = new Vec3(1, 1, 1),
         public intensity: number = 1,

@@ -2,6 +2,7 @@ import type { ChannelOps } from './channels';
 import type { Game } from '../game';
 import { Vec3 } from '../graphics/math/vec';
 import { WebRtcHandler } from '../webrtcHandler';
+import { Quat } from '../graphics/math/quat';
 
 export class GameStateChannel {
     public channel!: RTCDataChannel;
@@ -47,7 +48,7 @@ export class GameStateChannel {
                     this.game.gameState.movePlayer(playerId, new Vec3(-player.y, 0, -player.x));
                     this.game.gameState.setPlayerRotate(
                         playerId,
-                        new Vec3(player.xrot, player.yrot, 0),
+                        Quat.fromEuler(new Vec3(player.xrot, player.yrot, 0)),
                     );
                 } else {
                     this.game.actionBuffer.discardUpTo(data.tick);

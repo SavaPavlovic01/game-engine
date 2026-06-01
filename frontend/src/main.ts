@@ -1,6 +1,7 @@
 import { Game } from './game.js';
 import { DirectionalLight } from './graphics/lightSource.js';
 import { MaterialId } from './graphics/materials/material.js';
+import { Quat } from './graphics/math/quat.js';
 import { Vec3 } from './graphics/math/vec.js';
 import { Cube } from './graphics/objects/cube.js';
 //import { LightCube } from './graphics/objects/lightCube.js';
@@ -49,12 +50,12 @@ window.onload = async () => {
         texture,
     );
 
-    const ramp = new Ramp('wall', new Vec3(0, -2, 0), new Vec3(0, 0, 0), new Vec3(10, 5, 10));
-    const wall = new Cube('wall', new Vec3(0, 0, 6.9), new Vec3(0, 0, 0), new Vec3(10, 10, 5));
+    const ramp = new Ramp('wall', new Vec3(0, -2, 0), Quat.identity(), new Vec3(10, 5, 10));
+    const wall = new Cube('wall', new Vec3(0, 0, 6.9), Quat.identity(), new Vec3(10, 10, 5));
     const floor = new Cube(
         MaterialId.Default,
         new Vec3(0, -5, 0),
-        new Vec3(0, 0, 0),
+        Quat.identity(),
         new Vec3(50, 1, 50),
     );
     game.gameState.addStaticModel(ramp);

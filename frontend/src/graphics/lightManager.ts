@@ -36,7 +36,6 @@ export class LightManager {
     }
 
     private syncDirectional(scene: Scene) {
-        // Clear all slots, then re-assign from scene
         this.directionalSlots.fill(null);
 
         for (let i = 0; i < scene.directionalLights.length; i++) {
@@ -54,7 +53,6 @@ export class LightManager {
             );
         }
 
-        // Zero out any slots that are no longer in use
         for (let i = scene.directionalLights.length; i < LightManager.MAX_DIRECTIONAL_LIGHTS; i++) {
             this.driver.device.queue.writeBuffer(
                 this.directionalBuffer,

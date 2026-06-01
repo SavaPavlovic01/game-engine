@@ -1,6 +1,7 @@
 import { STRIDE } from '../../constants';
 import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
+import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
 import { Mesh, meshLibrary, ModelPart } from '../mesh';
 import { Model } from '../model';
@@ -45,7 +46,7 @@ export class Ramp extends Model {
     constructor(
         material: string,
         translate: Vec3 = new Vec3(0, 0, 0),
-        rotate: Vec3 = new Vec3(0, 0, 0),
+        rotate: Quat = Quat.identity(),
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
         super(translate, rotate, scale, [new ModelPart(Ramp.rampVertices, Ramp.indices, material)]);

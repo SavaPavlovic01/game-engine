@@ -13,7 +13,6 @@ struct VertexOut {
 
 @vertex
 fn vs_main(@builtin(vertex_index) vertIndex: u32) -> VertexOut {
-    // fullscreen cube positions
     var positions = array<vec3<f32>, 36>(
         vec3(-1.0, -1.0, -1.0), vec3( 1.0,  1.0, -1.0), vec3( 1.0, -1.0, -1.0),
         vec3( 1.0,  1.0, -1.0), vec3(-1.0, -1.0, -1.0), vec3(-1.0,  1.0, -1.0),
@@ -33,11 +32,9 @@ fn vs_main(@builtin(vertex_index) vertIndex: u32) -> VertexOut {
     var out: VertexOut;
     out.localPos = pos;
 
-    // strip translation from VP by zeroing the translation column
     var rotVP = vp.vp;
     rotVP[3] = vec4(0.0, 0.0, 0.0, 1.0);
 
-    // force depth to 1.0 (always at max depth, behind everything)
     let clip = rotVP * vec4(pos, 1.0);
     out.position = clip.xyww;
     return out;
