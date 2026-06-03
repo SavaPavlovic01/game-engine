@@ -5,10 +5,15 @@ import { Scene } from './graphics/scene.js';
 import { Vec3 } from './graphics/math/vec.js';
 import type { IRenderer } from './graphics/renderer';
 import type { Quat } from './graphics/math/quat.js';
+import { NaivePhysicsWorld } from './graphics/physics/NaivePhysicsWorld.js';
+import type { RigidBodyHandle } from './graphics/physics/PhysicsWorld.js';
+import type { RigidBodyOptions } from './graphics/physics/rigidBody.js';
 
 export class GameState {
     public scene: Scene;
     public players: Map<string, Model> = new Map();
+    private physics: NaivePhysicsWorld = new NaivePhysicsWorld();
+    private rigidBodies: Map<Model, RigidBodyHandle> = new Map();
 
     private renderer: IRenderer;
 
@@ -25,6 +30,23 @@ export class GameState {
     public addStaticModel(model: Model) {
         this.scene.addStaticObject(model);
         this.renderer.registerObject(model);
+        this.physics.addStaticMesh(model);
+    }
+
+    public addDynamicModel(model: Model, opts: RigidBodyOptions): RigidBodyHandle {
+        this.scene.addObject(model);
+        this.renderer.registerObject(model);
+
+        const aabb = model.aabb;
+        const halfExtents = new Vec3(
+            (aabb.max.X - aabb.min.X) / 2,
+            (aabb.max.Y - aabb.min.Y) / 2,
+            (aabb.max.Z - aabb.min.Z) / 2,
+        );
+
+        const handle = this.physics.addBox(model, halfExtents, opts);
+        this.rigidBodies.set(model, handle);
+        return handle;
     }
 
     public removeModel(model: Model) {
@@ -99,5 +121,22 @@ export class GameState {
         const player = this.players.get(playerId);
         if (!player) console.warn(`Player not found: ${playerId}`);
         return player;
+    }
+
+    public step(dt: number) {
+        this.physics.step(dt);
+        for (const model of this.rigidBodies.keys()) {
+            this.renderer.syncTransform(model);
+        }
+    }
+
+    public applyImpulse(model: Model, impulse: Vec3, worldPoint?: Vec3) {
+        const handle = this.rigidBodies.get(model);
+        if (handle) this.physics.applyImpulse(handle, impulse, worldPoint);
+    }
+
+    public applyForce(model: Model, force: Vec3, worldPoint?: Vec3) {
+        const handle = this.rigidBodies.get(model);
+        if (handle) this.physics.applyForce(handle, force, worldPoint);
     }
 }

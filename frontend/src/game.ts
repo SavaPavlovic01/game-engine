@@ -126,6 +126,8 @@ export class Game {
             const newPos = controller.update(model, dt);
             this.gameState.moveModel(model, newPos);
         }
+
+        this.gameState.step(dt);
     }
 
     public movePlayer(dirX: number, dirY: number) {

@@ -62,6 +62,15 @@ window.onload = async () => {
     game.gameState.addStaticModel(wall);
     game.gameState.addStaticModel(floor);
 
+    const movingCube = new Cube('wall', new Vec3(0, 10, 0));
+    game.gameState.addDynamicModel(movingCube, {
+        mass: 10,
+        restitution: 0.1,
+        friction: 0.6,
+        linearDamping: 0.1,
+        angularDamping: 0.9,
+    });
+
     //const cube = new Cube(MaterialId.Default);
     //const cube2 = new Cube(MaterialId.Default, new Vec3(1, 0, 0));
     //game.gameState.addModel(cube);

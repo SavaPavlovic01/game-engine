@@ -20,6 +20,7 @@ const GRAVITY = new Vec3(0, -9.81, 0);
 export class NaivePhysicsWorld implements IPhysicsWorld {
     private bodies: Map<symbol, RigidBody> = new Map();
     private staticBVH: StaticBVH = new StaticBVH();
+    private staticSurfaceFriction: number = 0.6;
 
     public addStaticMesh(model: Model): IStaticBody {
         this.staticBVH.addModel(model);
@@ -76,10 +77,16 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
             if (body.inverseMass === 0) continue;
 
             body.applyForce(GRAVITY.scale(1 / body.inverseMass));
-
             body.integrate(dt);
-
             this.resolveCollisions(body);
+
+            // sleep AFTER collisions so friction impulses can't re-wake it
+            if (body.velocity.magnitude() < 0.05) {
+                body.velocity = Vec3.zeros();
+            }
+            if (body.angularVelocity.magnitude() < 0.5) {
+                body.angularVelocity = Vec3.zeros();
+            }
         }
     }
 
@@ -91,43 +98,50 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
             const hit = aabbVsTriangleMTV(aabb, triangle);
             if (!hit) continue;
 
+            // --- positional correction ---
             body.position = body.position.add(hit.normal.scale(hit.penetration));
             body.model.setTranslate(body.position);
 
-            const center = body.position;
+            // --- contact point: face of AABB deepest along collision normal ---
+            const aabbCenter = body.position;
             const halfExtents = new Vec3(
                 (aabb.max.X - aabb.min.X) / 2,
                 (aabb.max.Y - aabb.min.Y) / 2,
                 (aabb.max.Z - aabb.min.Z) / 2,
             );
             const contactPoint = new Vec3(
-                center.X - hit.normal.X * halfExtents.X,
-                center.Y - hit.normal.Y * halfExtents.Y,
-                center.Z - hit.normal.Z * halfExtents.Z,
+                aabbCenter.X - hit.normal.X * halfExtents.X,
+                aabbCenter.Y - hit.normal.Y * halfExtents.Y,
+                aabbCenter.Z - hit.normal.Z * halfExtents.Z,
             );
 
             const r = contactPoint.sub(body.position);
 
+            // --- relative velocity at contact point ---
             const velAtContact = body.velocity.add(body.angularVelocity.cross(r));
             const velAlongNormal = velAtContact.dot(hit.normal);
 
+            // already separating — skip
             if (velAlongNormal > 0) continue;
 
+            // --- impulse denominator ---
             const worldInvI = body.worldInertiaTensorInv();
             const rCrossN = r.cross(hit.normal);
             const angularEffect = worldInvI.mulVec(rCrossN).cross(r).dot(hit.normal);
             const denom = body.inverseMass + angularEffect;
 
+            // --- normal impulse ---
             const j = (-(1 + body.restitution) * velAlongNormal) / denom;
-
             body.applyImpulse(hit.normal.scale(j), contactPoint);
 
+            // --- friction impulse ---
+            const combinedFriction = Math.sqrt(body.friction * this.staticSurfaceFriction);
             const tangent = velAtContact.sub(hit.normal.scale(velAlongNormal));
             const tangentLen = tangent.magnitude();
             if (tangentLen > 1e-6) {
                 const tangentDir = tangent.scale(1 / tangentLen);
                 const jt = -velAtContact.dot(tangentDir) / denom;
-                const frictionClamp = j * body.friction;
+                const frictionClamp = j * combinedFriction;
                 const frictionImpulse = tangentDir.scale(
                     Math.max(-frictionClamp, Math.min(frictionClamp, jt)),
                 );
