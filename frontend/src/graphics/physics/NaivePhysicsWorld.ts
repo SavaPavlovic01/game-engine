@@ -1,5 +1,3 @@
-// physics/NaivePhysicsWorld.ts
-
 import { Vec3 } from '../math/vec';
 import { StaticBVH } from '../collision/StaticBVH';
 import { aabbVsTriangleMTV } from '../collision/CharacterController';
@@ -80,7 +78,6 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
             body.integrate(dt);
             this.resolveCollisions(body);
 
-            // sleep AFTER collisions so friction impulses can't re-wake it
             if (body.velocity.magnitude() < 0.05) {
                 body.velocity = Vec3.zeros();
             }
@@ -98,11 +95,9 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
             const hit = aabbVsTriangleMTV(aabb, triangle);
             if (!hit) continue;
 
-            // --- positional correction ---
             body.position = body.position.add(hit.normal.scale(hit.penetration));
             body.model.setTranslate(body.position);
 
-            // --- contact point: face of AABB deepest along collision normal ---
             const aabbCenter = body.position;
             const halfExtents = new Vec3(
                 (aabb.max.X - aabb.min.X) / 2,
@@ -117,24 +112,19 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
 
             const r = contactPoint.sub(body.position);
 
-            // --- relative velocity at contact point ---
             const velAtContact = body.velocity.add(body.angularVelocity.cross(r));
             const velAlongNormal = velAtContact.dot(hit.normal);
 
-            // already separating — skip
             if (velAlongNormal > 0) continue;
 
-            // --- impulse denominator ---
             const worldInvI = body.worldInertiaTensorInv();
             const rCrossN = r.cross(hit.normal);
             const angularEffect = worldInvI.mulVec(rCrossN).cross(r).dot(hit.normal);
             const denom = body.inverseMass + angularEffect;
 
-            // --- normal impulse ---
             const j = (-(1 + body.restitution) * velAlongNormal) / denom;
             body.applyImpulse(hit.normal.scale(j), contactPoint);
 
-            // --- friction impulse ---
             const combinedFriction = Math.sqrt(body.friction * this.staticSurfaceFriction);
             const tangent = velAtContact.sub(hit.normal.scale(velAlongNormal));
             const tangentLen = tangent.magnitude();

@@ -1,5 +1,3 @@
-// physics/IPhysicsWorld.ts
-
 import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
 import type { Model } from '../model';

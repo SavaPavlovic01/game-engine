@@ -7,9 +7,9 @@ import type { Model } from '../model';
 
 export interface RigidBodyOptions {
     mass: number;
-    restitution: number; // 0 = inelastic, 1 = perfectly elastic
-    friction: number; // 0–1
-    linearDamping: number; // 0 = no damping
+    restitution: number;
+    friction: number;
+    linearDamping: number;
     angularDamping: number;
 }
 
@@ -25,8 +25,8 @@ export class RigidBody {
     public angularVelocity: Vec3 = Vec3.zeros();
     public torqueAccum: Vec3 = Vec3.zeros();
 
-    public readonly inverseMass: number; // 0 = infinite mass (static)
-    public readonly localInertiaTensorInv: Mat3; // in body space
+    public readonly inverseMass: number;
+    public readonly localInertiaTensorInv: Mat3;
 
     public readonly restitution: number;
     public readonly friction: number;
