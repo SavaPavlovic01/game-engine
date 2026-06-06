@@ -8,6 +8,7 @@ import { Cube } from './graphics/objects/cube.js';
 import { Ramp } from './graphics/objects/ramp.js';
 import { Skybox } from './graphics/skybox.js';
 import { InputHandler } from './inputHandler.js';
+import { MaterialEditor } from './ui/materialEditor.js';
 import { SceneEditor } from './ui/sceneEditor.js';
 
 let game: Game;
@@ -101,4 +102,5 @@ window.onload = async () => {
     game.startRender();
 
     const editor = new SceneEditor(game);
+    const materialEditor = new MaterialEditor(game);
 };
