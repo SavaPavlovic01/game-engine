@@ -4,6 +4,7 @@ import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
 import { Mat3 } from '../math/mat3';
 import type { Model } from '../model';
+import { OBBCollider, type Collider } from '../collision/Collider';
 
 export interface RigidBodyOptions {
     mass: number;
@@ -85,6 +86,10 @@ export class RigidBody {
         }
     }
 
+    get collider() {
+        return this.model.collider;
+    }
+
     public integrate(dt: number): void {
         if (this.inverseMass === 0) return;
 
@@ -108,5 +113,6 @@ export class RigidBody {
 
         this.model.setTranslate(this.position);
         this.model.setRotate(this.orientation);
+        this.model.collider.update(this.position, this.orientation);
     }
 }

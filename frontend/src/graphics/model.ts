@@ -1,6 +1,7 @@
 import { simpleFrag, simpleVert } from '../generated/shaders';
 import type { Camera } from './camera';
 import type { Bounded } from './collision/BVH';
+import { AABBCollider, OBBCollider, type Collider } from './collision/Collider';
 import { Ray, type AABB } from './collision/ray';
 import { Material } from './materials/material';
 import { Mat4 } from './math/mat';
@@ -12,7 +13,7 @@ import type { WebGPUDriver } from './webGpuDriver';
 export abstract class Model implements Bounded {
     public translation: Vec3;
     public rotation: Quat;
-    private scale: Vec3;
+    public scale: Vec3;
 
     private modelMatrix: Mat4;
 
@@ -23,12 +24,19 @@ export abstract class Model implements Bounded {
 
     public parts: ModelPart[];
 
+    private _collider: Collider | null = null;
+
     constructor(translate: Vec3, rotate: Quat, scale: Vec3, parts: ModelPart[]) {
         this.translation = translate;
         this.rotation = rotate;
         this.scale = scale;
         this.parts = parts;
         this.modelMatrix = this.buildModelMatrix();
+    }
+
+    get collider() {
+        this._collider ??= OBBCollider.fromModel(this);
+        return this._collider;
     }
 
     public getModelMatrix() {

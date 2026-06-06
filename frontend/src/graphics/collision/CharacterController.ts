@@ -1,5 +1,6 @@
 import { Vec3 } from '../math/vec';
 import type { Model } from '../model';
+import { AABBCollider } from './Collider';
 import type { StaticBVH } from './StaticBVH';
 import type { AABB } from './ray';
 import { Triangle } from './triangle';
@@ -86,42 +87,22 @@ export const aabbVsTriangleMTV = (aabb: AABB, triangle: Triangle): AABBCollision
     return { normal: best.normal, penetration: best.pen };
 };
 
+// collision/CharacterController.ts
+
 export class CharacterController {
     private staticBVH: StaticBVH;
+    private gravityVelocity: Vec3 = Vec3.zeros();
+    private moveVelocity: Vec3 = Vec3.zeros();
 
-    public velocity: Vec3 = new Vec3(0, 0, 0);
     public grounded: boolean = false;
 
     private static readonly GRAVITY = -20;
-    private static readonly RADIUS = 0.4;
-    private static readonly HALF_HEIGHT = 0.8;
-    private static readonly SKIN_WIDTH = 0.01;
     private static readonly GROUND_THRESHOLD = 0.7;
-    private static readonly JUMP_FORCE = 1;
     private static readonly MAX_ITERATIONS = 1;
 
     constructor(staticBVH: StaticBVH) {
         this.staticBVH = staticBVH;
     }
-
-    private getCapsulePoints(position: Vec3): { top: Vec3; bottom: Vec3 } {
-        return {
-            top: position.add(new Vec3(0, CharacterController.HALF_HEIGHT, 0)),
-            bottom: position.add(new Vec3(0, -CharacterController.HALF_HEIGHT, 0)),
-        };
-    }
-
-    private getCapsuleAABB(position: Vec3): AABB {
-        const r = CharacterController.RADIUS;
-        const h = CharacterController.HALF_HEIGHT;
-        return {
-            min: new Vec3(position.X - r, position.Y - h - r, position.Z - r),
-            max: new Vec3(position.X + r, position.Y + h + r, position.Z + r),
-        };
-    }
-
-    private gravityVelocity: Vec3 = new Vec3(0, 0, 0);
-    private moveVelocity: Vec3 = new Vec3(0, 0, 0);
 
     public setMoveVelocity(v: Vec3) {
         this.moveVelocity = v;
@@ -129,7 +110,7 @@ export class CharacterController {
 
     public jump() {
         if (this.grounded) {
-            this.gravityVelocity = new Vec3(0, CharacterController.JUMP_FORCE, 0);
+            this.gravityVelocity = new Vec3(0, 5, 0);
             this.grounded = false;
         }
     }
@@ -147,22 +128,35 @@ export class CharacterController {
         for (let i = 0; i < CharacterController.MAX_ITERATIONS; i++) {
             const offset = newPosition.sub(model.translation);
             const modelAabb = model.aabb;
-            const aabb = { max: modelAabb.max.add(offset), min: modelAabb.min.add(offset) };
-            const collisions = this.test(aabb);
+
+            const collider = new AABBCollider(
+                new Vec3(
+                    (modelAabb.min.X + modelAabb.max.X) / 2 + offset.X,
+                    (modelAabb.min.Y + modelAabb.max.Y) / 2 + offset.Y,
+                    (modelAabb.min.Z + modelAabb.max.Z) / 2 + offset.Z,
+                ),
+                new Vec3(
+                    (modelAabb.max.X - modelAabb.min.X) / 2,
+                    (modelAabb.max.Y - modelAabb.min.Y) / 2,
+                    (modelAabb.max.Z - modelAabb.min.Z) / 2,
+                ),
+            );
+
+            const contacts = this.staticBVH.query(collider);
 
             this.grounded = false;
-            if (collisions.length === 0) break;
+            if (contacts.length === 0) break;
 
             let groundedThisFrame = false;
-            for (const coll of collisions) {
-                newPosition = newPosition.add(coll.normal.scale(coll.penetration));
+            for (const { hit } of contacts) {
+                newPosition = newPosition.add(hit.normal.scale(hit.penetration));
 
-                const gravDot = this.gravityVelocity.dot(coll.normal);
+                const gravDot = this.gravityVelocity.dot(hit.normal);
                 if (gravDot < 0) {
-                    this.gravityVelocity = this.gravityVelocity.sub(coll.normal.scale(gravDot));
+                    this.gravityVelocity = this.gravityVelocity.sub(hit.normal.scale(gravDot));
                 }
 
-                if (coll.normal.Y > CharacterController.GROUND_THRESHOLD) {
+                if (hit.normal.Y > CharacterController.GROUND_THRESHOLD) {
                     groundedThisFrame = true;
                 }
             }
@@ -170,140 +164,9 @@ export class CharacterController {
         }
 
         if (this.grounded) {
-            this.gravityVelocity = new Vec3(0, 0, 0);
+            this.gravityVelocity = Vec3.zeros();
         }
 
         return newPosition;
-    }
-
-    public test(aabb: AABB) {
-        const collisions = [];
-        const candiates = this.staticBVH.query(aabb);
-        for (let c of candiates) {
-            const hit = aabbVsTriangleMTV(aabb, c);
-            if (hit !== null) collisions.push(hit);
-        }
-
-        return collisions;
-    }
-
-    public move(model: Model) {
-        let pos = model.translation;
-        let grounded = false;
-        const colls = this.test(model.aabb);
-        console.log(`start pos ${pos}`);
-        for (const coll of colls) {
-            console.log(`adding ${coll.normal.scale(coll.penetration)}`);
-            pos = pos.add(coll.normal.scale(coll.penetration));
-            if (coll.normal.Y > 0.7) grounded = true;
-        }
-
-        console.log(`returing ${pos}`);
-        return { pos: pos, grounded: grounded };
-    }
-
-    private resolveCollisions(position: Vec3): { position: Vec3; grounded: boolean } {
-        const aabb = this.getCapsuleAABB(position);
-        const candidates = this.staticBVH.query(aabb);
-
-        let grounded = false;
-        let resolved = position;
-
-        for (const triangle of candidates) {
-            const result = this.resolveTriangle(resolved, triangle);
-            if (result === null) continue;
-
-            resolved = result.position;
-
-            if (triangle.normal.Y > 0.7) {
-                grounded = true;
-            }
-        }
-
-        return { position: resolved, grounded };
-    }
-
-    private resolveTriangle(position: Vec3, triangle: Triangle): { position: Vec3 } | null {
-        const { top, bottom } = this.getCapsulePoints(position);
-        const r = CharacterController.RADIUS;
-
-        const closest = this.closestPointOnTriangle(
-            this.closestPointOnSegment(triangle.a, top, bottom),
-            triangle,
-        );
-
-        const onSegment = this.closestPointOnSegment(closest, top, bottom);
-
-        const diff = onSegment.sub(closest);
-        const dist = diff.magnitude();
-
-        if (dist >= r + CharacterController.SKIN_WIDTH) return null;
-
-        if (dist < 1e-6) {
-            return {
-                position: position.add(
-                    triangle.normal.scale(r - dist + CharacterController.SKIN_WIDTH),
-                ),
-            };
-        }
-
-        const pushDir = diff.scale(1 / dist);
-        const pushAmount = r - dist + CharacterController.SKIN_WIDTH;
-
-        return {
-            position: position.add(pushDir.scale(pushAmount)),
-        };
-    }
-
-    private closestPointOnSegment(p: Vec3, a: Vec3, b: Vec3): Vec3 {
-        const ab = b.sub(a);
-        const lenSq = ab.lengthSquared();
-        if (lenSq < 1e-8) return a;
-
-        const t = Math.max(0, Math.min(1, p.sub(a).dot(ab) / lenSq));
-        return a.add(ab.scale(t));
-    }
-
-    private closestPointOnTriangle(p: Vec3, tri: Triangle): Vec3 {
-        const ab = tri.b.sub(tri.a);
-        const ac = tri.c.sub(tri.a);
-        const ap = p.sub(tri.a);
-
-        const d1 = ab.dot(ap);
-        const d2 = ac.dot(ap);
-        if (d1 <= 0 && d2 <= 0) return tri.a;
-
-        const bp = p.sub(tri.b);
-        const d3 = ab.dot(bp);
-        const d4 = ac.dot(bp);
-        if (d3 >= 0 && d4 <= d3) return tri.b;
-
-        const cp = p.sub(tri.c);
-        const d5 = ab.dot(cp);
-        const d6 = ac.dot(cp);
-        if (d6 >= 0 && d5 <= d6) return tri.c;
-
-        const vc = d1 * d4 - d3 * d2;
-        if (vc <= 0 && d1 >= 0 && d3 <= 0) {
-            const v = d1 / (d1 - d3);
-            return tri.a.add(ab.scale(v));
-        }
-
-        const vb = d5 * d2 - d1 * d6;
-        if (vb <= 0 && d2 >= 0 && d6 <= 0) {
-            const w = d2 / (d2 - d6);
-            return tri.a.add(ac.scale(w));
-        }
-
-        const va = d3 * d6 - d5 * d4;
-        if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
-            const w = (d4 - d3) / (d4 - d3 + (d5 - d6));
-            return tri.b.add(tri.c.sub(tri.b).scale(w));
-        }
-
-        const denom = 1 / (va + vb + vc);
-        const v = vb * denom;
-        const w = vc * denom;
-        return tri.a.add(ab.scale(v)).add(ac.scale(w));
     }
 }

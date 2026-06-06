@@ -89,10 +89,10 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
 
     private resolveCollisions(body: RigidBody): void {
         const aabb = body.model.aabb;
-        const candidates = this.staticBVH.query(aabb);
+        const candidates = this.staticBVH.query(body.model.collider);
 
-        for (const triangle of candidates) {
-            const hit = aabbVsTriangleMTV(aabb, triangle);
+        for (const candidate of candidates) {
+            const hit = aabbVsTriangleMTV(aabb, candidate.triangle);
             if (!hit) continue;
 
             body.position = body.position.add(hit.normal.scale(hit.penetration));
