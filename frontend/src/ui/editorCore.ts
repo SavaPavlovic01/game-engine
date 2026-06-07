@@ -17,7 +17,7 @@ class MaterialRegistryClass {
 
     onChange(fn: MaterialChangeListener): () => void {
         this.listeners.add(fn);
-        return () => this.listeners.delete(fn); // returns unsubscribe
+        return () => this.listeners.delete(fn);
     }
 
     private notify() {

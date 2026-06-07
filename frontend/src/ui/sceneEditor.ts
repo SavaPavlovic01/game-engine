@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// sceneEditor.ts
-// Panel for adding objects to the scene and editing their transforms.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { Game } from '../game.js';
 import { Cube } from '../graphics/objects/cube.js';
 import { Ramp } from '../graphics/objects/ramp.js';
@@ -37,10 +32,12 @@ export class SceneEditor extends DraggablePanel {
         MaterialRegistry.onChange((materials) => {
             this.syncMaterialSelect('se-material', materials);
             this.syncMaterialSelect('se-obj-material', materials);
+            this.syncMaterialSelect('se-inspector-material', materials);
         });
 
         this.syncMaterialSelect('se-material', MaterialRegistry.getAll());
         this.syncMaterialSelect('se-obj-material', MaterialRegistry.getAll());
+        this.syncMaterialSelect('se-inspector-material', MaterialRegistry.getAll());
     }
 
     addToHierarchy(name: string, type: HierarchyEntry['type'], model: Model) {
@@ -50,68 +47,75 @@ export class SceneEditor extends DraggablePanel {
 
     protected buildBody(container: HTMLElement) {
         const typeSection = this.section(`
-            ${this.label('Add object')}
-            <div class="se-btn-group">
-                <button class="se-type-btn se-active" data-type="cube-static">
-                    <span class="se-dot se-dot-static"></span> Cube <em>static</em>
-                </button>
-                <button class="se-type-btn" data-type="ramp-static">
-                    <span class="se-dot se-dot-static"></span> Ramp <em>static</em>
-                </button>
-                <button class="se-type-btn" data-type="cube-dynamic">
-                    <span class="se-dot se-dot-dynamic"></span> Cube <em>dynamic</em>
-                </button>
-            </div>
-        `);
+        ${this.label('Add object')}
+        <div class="se-btn-group">
+            <button class="se-type-btn se-active" data-type="cube-static">
+                <span class="se-dot se-dot-static"></span> Cube <em>static</em>
+            </button>
+            <button class="se-type-btn" data-type="ramp-static">
+                <span class="se-dot se-dot-static"></span> Ramp <em>static</em>
+            </button>
+            <button class="se-type-btn" data-type="cube-dynamic">
+                <span class="se-dot se-dot-dynamic"></span> Cube <em>dynamic</em>
+            </button>
+        </div>
+    `);
 
         const matSection = this.section(`
-            ${this.label('Material')}
-            ${this.materialSelect('se-material')}
-        `);
+        ${this.label('Material')}
+        ${this.materialSelect('se-material')}
+    `);
 
         const transformSection = this.section(`
-            ${this.label('Position')}
-            ${this.xyzInputs('se-px', 0, 0, 0)}
-            ${this.label('Scale')}
-            ${this.xyzInputs('se-sx', 1, 1, 1)}
-        `);
+        ${this.label('Position')}
+        ${this.xyzInputs('se-px', 0, 0, 0)}
+        ${this.label('Scale')}
+        ${this.xyzInputs('se-sx', 1, 1, 1)}
+    `);
         transformSection.querySelectorAll<HTMLElement>('.se-label')[1]!.style.marginTop = '8px';
 
         const addSection = this.section(`
-            <button class="se-primary-btn" id="se-add">Add to scene</button>
-        `);
+        <button class="se-primary-btn" id="se-add">Add to scene</button>
+    `);
 
         const objSection = this.section(`
-            ${this.label('Load OBJ')}
-            <input type="file" id="se-obj-file" accept=".obj" class="se-file-input">
-            ${this.label('Fallback material')}
-            ${this.materialSelect('se-obj-material')}
-            <button class="se-primary-btn" id="se-obj-load" style="margin-top:8px;" disabled>Load into scene</button>
-            <div class="se-status" id="se-obj-status"></div>
-        `);
+        ${this.label('Load OBJ')}
+        <input type="file" id="se-obj-file" accept=".obj" class="se-file-input">
+        ${this.label('Fallback material')}
+        ${this.materialSelect('se-obj-material')}
+        <button class="se-primary-btn" id="se-obj-load" style="margin-top:8px;" disabled>Load into scene</button>
+        <div class="se-status" id="se-obj-status"></div>
+    `);
         objSection.querySelectorAll<HTMLElement>('.se-label')[1]!.style.marginTop = '8px';
 
         const hierarchySection = this.section(`
-            ${this.label('Hierarchy')}
-            <div id="se-hierarchy-list" style="
-                display:flex;flex-direction:column;max-height:160px;overflow-y:auto;
-                scrollbar-width:thin;scrollbar-color:#333 transparent;
-            "></div>
-        `);
+        ${this.label('Hierarchy')}
+        <div id="se-hierarchy-list" style="
+            display:flex;flex-direction:column;max-height:160px;overflow-y:auto;
+            scrollbar-width:thin;scrollbar-color:#333 transparent;
+        "></div>
+    `);
 
         const inspectorSection = this.section(`
-            <div class="se-row" style="margin-bottom:6px;">
-                <span class="se-label" id="se-inspector-title" style="margin:0;flex:1;">Inspector</span>
-                <button class="se-close-btn" id="se-inspector-close">✕</button>
+        <div class="se-row" style="margin-bottom:6px;">
+            <span class="se-label" id="se-inspector-title" style="margin:0;flex:1;">Inspector</span>
+            <button class="se-close-btn" id="se-inspector-close">✕</button>
+        </div>
+        ${this.label('Position')}
+        ${this.xyzInputs('se-ip', 0, 0, 0)}
+        ${this.label('Scale')}
+        ${this.xyzInputs('se-is', 1, 1, 1)}
+        <div style="margin-top:8px;">
+            ${this.label('Material')}
+            <div class="se-row" style="gap:4px;">
+                ${this.materialSelect('se-inspector-material')}
+                <button class="se-close-btn" id="se-mat-reset" title="Reset to default">↺</button>
             </div>
-            ${this.label('Position')}
-            ${this.xyzInputs('se-ip', 0, 0, 0)}
-            ${this.label('Scale')}
-            ${this.xyzInputs('se-is', 1, 1, 1)}
-            <div style="margin-top:10px;">
-                <button class="se-danger-btn" id="se-remove">Remove</button>
-            </div>
-        `);
+        </div>
+        <div style="margin-top:10px;">
+            <button class="se-danger-btn" id="se-remove">Remove</button>
+        </div>
+    `);
         inspectorSection.querySelectorAll<HTMLElement>('.se-label')[1]!.style.marginTop = '8px';
         inspectorSection.style.background = '#161616';
         inspectorSection.style.display = 'none';
@@ -150,7 +154,7 @@ export class SceneEditor extends DraggablePanel {
         this.onScaleInputDebounced = this.debounce(() => {
             if (!this.selectedEntry) return;
             const [x, y, z] = this.readXyz('se-is');
-            // this.game.gameState.setScale(this.selectedEntry.model, new Vec3(x, y, z));
+            this.game.gameState.setScale(this.selectedEntry.model, new Vec3(x, y, z));
             console.log('setScale not yet implemented on gameState', x, y, z);
         });
 
@@ -171,6 +175,17 @@ export class SceneEditor extends DraggablePanel {
         container
             .querySelector('#se-remove')!
             .addEventListener('click', () => this.removeSelected());
+
+        this.q<HTMLSelectElement>('#se-inspector-material').addEventListener('change', (e) => {
+            const id = (e.target as HTMLSelectElement).value;
+            this.applyMaterialToSelected(id);
+        });
+
+        this.q<HTMLButtonElement>('#se-mat-reset').addEventListener('click', () => {
+            this.applyMaterialToSelected(MaterialId.Default);
+            this.syncMaterialSelect('se-inspector-material', MaterialRegistry.getAll());
+            this.q<HTMLSelectElement>('#se-inspector-material').value = MaterialId.Default;
+        });
     }
 
     private wireObjLoader(container: HTMLElement) {
@@ -235,8 +250,19 @@ export class SceneEditor extends DraggablePanel {
         this.setXyz('se-ip', pos.X, pos.Y, pos.Z);
         this.setXyz('se-is', scale.X, scale.Y, scale.Z);
 
+        const currentMat = entry.model.parts[0]?.materialId ?? MaterialId.Default;
+        this.syncMaterialSelect('se-inspector-material', MaterialRegistry.getAll());
+        this.q<HTMLSelectElement>('#se-inspector-material').value = currentMat;
+
         this.q<HTMLElement>('#se-inspector-section').style.display = 'block';
         this.renderHierarchy();
+    }
+
+    private applyMaterialToSelected(materialId: string) {
+        if (!this.selectedEntry) return;
+        for (const part of this.selectedEntry.model.parts) {
+            part.materialId = materialId;
+        }
     }
 
     private closeInspector() {

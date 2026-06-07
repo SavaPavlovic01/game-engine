@@ -143,6 +143,11 @@ export abstract class Model implements Bounded {
         this.modelMatrix = this.buildModelMatrix();
     }
 
+    public setScale(scale: Vec3) {
+        this.scale = scale;
+        this.modelMatrix = this.buildModelMatrix();
+    }
+
     public rotate(delta: Quat) {
         this.rotation = delta.mul(this.rotation);
         this.modelMatrix = this.buildModelMatrix();

@@ -79,6 +79,11 @@ export class GameState {
         this.renderer.syncTransform(model);
     }
 
+    public setScale(model: Model, scale: Vec3) {
+        model.setScale(scale);
+        this.renderer.syncTransform(model);
+    }
+
     public addPlayer(playerId: string, materialId: string = MaterialId.Default) {
         const player = new Cube(materialId, new Vec3(0, 0, 0));
         this.players.set(playerId, player);
