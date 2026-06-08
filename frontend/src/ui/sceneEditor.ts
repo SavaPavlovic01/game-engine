@@ -112,6 +112,17 @@ export class SceneEditor extends DraggablePanel {
                 <button class="se-close-btn" id="se-mat-reset" title="Reset to default">↺</button>
             </div>
         </div>
+        <div style="margin-top:8px;">
+            <div class="se-row" style="cursor:pointer;user-select:none;" id="se-parts-toggle">
+                <span class="se-label" style="margin:0;flex:1;">Per-part materials</span>
+                <span id="se-parts-chevron" style="font-size:10px;color:#555;">▶</span>
+            </div>
+            <div id="se-part-list" style="
+                display:none;flex-direction:column;margin-top:6px;
+                max-height:160px;overflow-y:auto;
+                scrollbar-width:thin;scrollbar-color:#333 transparent;
+            "></div>
+        </div>
         <div style="margin-top:10px;">
             <button class="se-danger-btn" id="se-remove">Remove</button>
         </div>
@@ -186,6 +197,16 @@ export class SceneEditor extends DraggablePanel {
             this.syncMaterialSelect('se-inspector-material', MaterialRegistry.getAll());
             this.q<HTMLSelectElement>('#se-inspector-material').value = MaterialId.Default;
         });
+
+        this.q<HTMLElement>('#se-parts-toggle').addEventListener('click', () => {
+            const list = this.q<HTMLElement>('#se-part-list');
+            const chevron = this.q<HTMLElement>('#se-parts-chevron');
+            const isOpen = list.style.display === 'flex';
+            list.style.display = isOpen ? 'none' : 'flex';
+            list.style.flexDirection = 'column';
+            chevron.textContent = isOpen ? '▶' : '▼';
+            if (!isOpen) this.renderPartList();
+        });
     }
 
     private wireObjLoader(container: HTMLElement) {
@@ -241,6 +262,50 @@ export class SceneEditor extends DraggablePanel {
         });
     }
 
+    private renderPartList() {
+        const container = this.q<HTMLElement>('#se-part-list');
+        if (!container || !this.selectedEntry) return;
+
+        const materials = MaterialRegistry.getAll();
+        const parts = this.selectedEntry.model.parts;
+
+        container.innerHTML = '';
+        parts.forEach((part, i) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 0;';
+
+            const label = document.createElement('span');
+            label.style.cssText = 'font-size:11px;color:#888;min-width:48px;flex-shrink:0;';
+            label.textContent = `Part ${i}`;
+
+            const select = document.createElement('select');
+            select.className = 'se-select';
+            select.style.cssText = 'flex:1;font-size:11px;';
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = MaterialId.Default;
+            defaultOpt.textContent = `default`;
+            select.appendChild(defaultOpt);
+
+            materials.forEach((id) => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = id;
+                select.appendChild(opt);
+            });
+
+            select.value = part.materialId ?? MaterialId.Default;
+
+            select.addEventListener('change', () => {
+                part.materialId = select.value;
+            });
+
+            row.appendChild(label);
+            row.appendChild(select);
+            container.appendChild(row);
+        });
+    }
+
     private openInspector(entry: HierarchyEntry) {
         this.selectedEntry = entry;
         this.q<HTMLElement>('#se-inspector-title').textContent = entry.name;
@@ -254,6 +319,8 @@ export class SceneEditor extends DraggablePanel {
         this.syncMaterialSelect('se-inspector-material', MaterialRegistry.getAll());
         this.q<HTMLSelectElement>('#se-inspector-material').value = currentMat;
 
+        this.renderPartList();
+
         this.q<HTMLElement>('#se-inspector-section').style.display = 'block';
         this.renderHierarchy();
     }
@@ -263,6 +330,7 @@ export class SceneEditor extends DraggablePanel {
         for (const part of this.selectedEntry.model.parts) {
             part.materialId = materialId;
         }
+        this.renderPartList();
     }
 
     private closeInspector() {
