@@ -64,7 +64,7 @@ export class GameState {
         this.renderer.syncTransform(model);
     }
 
-    private translate(model: Model, offset: Vec3) {
+    public translate(model: Model, offset: Vec3) {
         model.translate(offset);
         this.renderer.syncTransform(model);
     }

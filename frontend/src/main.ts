@@ -1,4 +1,5 @@
 import { Game } from './game.js';
+import { test } from './generated/shaders.js';
 import { DirectionalLight } from './graphics/lightSource.js';
 import { MaterialId } from './graphics/materials/material.js';
 import { Quat } from './graphics/math/quat.js';
@@ -18,6 +19,12 @@ setInterval(() => {});
 
 //let angle = 0;
 //const radius = 3;
+
+async function fetchScriptFile(path: string): Promise<File> {
+    const response = await fetch(path);
+    const blob = await response.blob();
+    return new File([blob], path.split('/').pop() ?? 'script.js');
+}
 
 window.onload = async () => {
     game = await Game.create();
@@ -54,6 +61,7 @@ window.onload = async () => {
 
     const ramp = new Ramp('wall', new Vec3(0, -2, 0), Quat.identity(), new Vec3(10, 5, 10));
     const wall = new Cube('wall', new Vec3(0, 0, 6.9), Quat.identity(), new Vec3(10, 10, 5));
+    const testcube = new Cube('wall', new Vec3(10, -4, -10), Quat.identity(), new Vec3(1, 1, 1));
     const floor = new Cube(
         MaterialId.Default,
         new Vec3(0, -5, 0),
@@ -63,6 +71,12 @@ window.onload = async () => {
     game.gameState.addStaticModel(ramp);
     game.gameState.addStaticModel(wall);
     game.gameState.addStaticModel(floor);
+
+    game.gameState.addModel(testcube);
+
+    const file = await fetchScriptFile('moveTest.js');
+    const moveScript = await game.scriptSystem.loadScript(file);
+    game.scriptSystem.attach(testcube, moveScript);
 
     const movingCube = new Cube('wall', new Vec3(0, 10, 0));
     game.gameState.addDynamicModel(movingCube, {

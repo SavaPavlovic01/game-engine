@@ -12,6 +12,7 @@ import { LobbyChannel } from './channel/lobbyChannel.js';
 import { ActionBuffer } from './actions/actionBuffer.js';
 import { TICK_PERIOD } from './constants.js';
 import { Quat } from './graphics/math/quat.js';
+import { ScriptSystem } from './scriptSystem.js';
 
 interface Player {
     model: Model;
@@ -38,6 +39,8 @@ export class Game {
     public gameStarted: boolean = false;
 
     public players: Player[] = [];
+
+    public scriptSystem = new ScriptSystem();
 
     private constructor() {}
 
@@ -108,7 +111,9 @@ export class Game {
         const delta = now - this.lastTime;
         this.lastTime = now;
 
+        this.scriptSystem.update(delta, this.gameState.scene, this.gameState);
         this.update(delta);
+
         this.renderer.render(this.gameState.scene);
 
         this.accumulator += delta;

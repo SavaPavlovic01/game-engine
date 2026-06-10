@@ -8,9 +8,9 @@ export class InputHandler {
 
     constructor(game: Game) {
         this.game = game;
-        window.onkeydown = this.onKeydown;
+        //window.onkeydown = this.onKeydown;
         window.onmousemove = this.onMouseMove;
-        window.onmousedown = this.onMouseClick;
+        //window.onmousedown = this.onMouseClick;
     }
 
     public makeLobby() {
