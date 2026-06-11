@@ -112,6 +112,7 @@ export class Game {
         this.lastTime = now;
 
         this.scriptSystem.update(delta, this.gameState.scene, this.gameState);
+        this.scriptSystem.input.flush();
         this.update(delta);
 
         this.renderer.render(this.gameState.scene);
