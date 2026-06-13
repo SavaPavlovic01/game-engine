@@ -75,8 +75,24 @@ window.onload = async () => {
     game.gameState.addModel(testcube);
 
     const file = await fetchScriptFile('moveTest.js');
+    const file1 = await fetchScriptFile('spawnCubes.js');
+    const testtset = await fetchScriptFile('testtest.js');
+    const moveCube = await fetchScriptFile('moveCubes.js');
+    const shoot = await fetchScriptFile('playerShoot.js');
+    const particle = await fetchScriptFile('particle.js');
+    await game.scriptSystem.loadScript(testtset);
+    await game.scriptSystem.loadScript(moveCube);
+    await game.scriptSystem.loadScript(particle);
+
     const moveScript = await game.scriptSystem.loadScript(file);
+    const spawnScript = await game.scriptSystem.loadScript(file1);
+    const shootScript = await game.scriptSystem.loadScript(shoot);
+
     game.scriptSystem.attach(testcube, moveScript);
+    game.scriptSystem.attach(testcube, spawnScript);
+    game.scriptSystem.attach(testcube, shootScript);
+
+    game.playerModel = testcube;
 
     const movingCube = new Cube('wall', new Vec3(0, 10, 0));
     game.gameState.addDynamicModel(movingCube, {

@@ -24,7 +24,7 @@ export class InstanceBuffer {
 
     private lastCompacted?: { drawBuffer: GPUBuffer; drawArgsBuffer: GPUBuffer };
 
-    constructor(driver: WebGPUDriver, capacity: number, forceCPU: boolean = false) {
+    constructor(driver: WebGPUDriver, capacity: number, forceCPU: boolean = true) {
         this.capacity = capacity;
         this.forceCPU = forceCPU;
         this.freeList = Array.from({ length: capacity }, (_, i) => i).reverse();
@@ -124,7 +124,7 @@ export class InstanceBuffer {
         drawArgsBuffer: GPUBuffer;
     } {
         let ret;
-        if (this.forceCPU || this.liveCount < GPU_THRESHOLD) {
+        if (!this.forceCPU && this.liveCount < GPU_THRESHOLD) {
             ret = this.compactCPU(driver, indexCount);
         } else {
             ret = this.compactGPU(driver, encoder, indexCount);

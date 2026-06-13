@@ -13,6 +13,8 @@ import { ActionBuffer } from './actions/actionBuffer.js';
 import { TICK_PERIOD } from './constants.js';
 import { Quat } from './graphics/math/quat.js';
 import { ScriptSystem } from './scriptSystem.js';
+import { Cube } from './graphics/objects/cube.js';
+import { Ramp } from './graphics/objects/ramp.js';
 
 interface Player {
     model: Model;
@@ -42,7 +44,18 @@ export class Game {
 
     public scriptSystem = new ScriptSystem();
 
+    public playerModel!: Model;
+
     private constructor() {}
+
+    private exposeTypes() {
+        window.__engine = {
+            Vec3,
+            Quat,
+            Cube,
+            Ramp,
+        };
+    }
 
     public static async create(): Promise<Game> {
         const game = new Game();
@@ -51,6 +64,7 @@ export class Game {
         game.renderer = new Renderer(game.graphics.driver);
         game.gameState = new GameState(game.renderer);
         game.lobbyChannel = await LobbyChannel.create(game);
+        game.exposeTypes();
         return game;
     }
 
@@ -111,7 +125,7 @@ export class Game {
         const delta = now - this.lastTime;
         this.lastTime = now;
 
-        this.scriptSystem.update(delta, this.gameState.scene, this.gameState);
+        this.scriptSystem.update(delta, this.gameState.scene, this.gameState, this);
         this.scriptSystem.input.flush();
         this.update(delta);
 

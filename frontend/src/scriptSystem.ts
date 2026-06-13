@@ -1,3 +1,4 @@
+import type { Game } from './game';
 import type { GameState } from './gameState';
 import type { Model } from './graphics/model';
 import type { Scene } from './graphics/scene';
@@ -9,6 +10,7 @@ export interface ScriptContext {
     dt: number;
     input: Input;
     gameState: GameState;
+    game: Game;
 }
 
 export interface Script {
@@ -23,6 +25,7 @@ interface ScriptInstance {
 
 export class ScriptSystem {
     private scripts = new Map<Model, ScriptInstance[]>();
+    private scriptCache = new Map<string, Script>();
     public input = new Input();
 
     attach(model: Model, script: Script) {
@@ -43,9 +46,16 @@ export class ScriptSystem {
         this.scripts.delete(model);
     }
 
-    update(dt: number, scene: Scene, gs: GameState) {
+    update(dt: number, scene: Scene, gs: GameState, game: Game) {
         for (const [model, instances] of this.scripts) {
-            const ctx: ScriptContext = { model, scene, dt, input: this.input, gameState: gs };
+            const ctx: ScriptContext = {
+                model,
+                scene,
+                dt,
+                input: this.input,
+                gameState: gs,
+                game: game,
+            };
             for (const instance of instances) {
                 if (!instance.initialized) {
                     instance.script.onInit?.(ctx);
@@ -59,6 +69,9 @@ export class ScriptSystem {
 
     async loadScript(file: File): Promise<Script> {
         const source = await file.text();
+        const name = file.name.replace(/\.js$/, '');
+        if (this.scriptCache.has(name)) return this.scriptCache.get(name)!;
+
         const blob = new Blob([source], { type: 'text/javascript' });
         const url = URL.createObjectURL(blob);
         const module = await import(url);
@@ -68,6 +81,12 @@ export class ScriptSystem {
             throw new Error('Script must export a default object with an update method');
         }
 
-        return module.default as Script;
+        const script = module.default as Script;
+        this.scriptCache.set(name, script);
+        return script;
+    }
+
+    public getScript(name: string) {
+        return this.scriptCache.get(name);
     }
 }

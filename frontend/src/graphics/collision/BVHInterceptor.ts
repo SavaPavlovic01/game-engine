@@ -16,6 +16,7 @@ export class BVHInterceptor implements Interceptor {
         this.bvh.build(models);
     }
 
+    // TODO: if you fire from a model, you will alway get that model, give a way to filter out itself
     public hitFirst(ray: Ray): HitResult | null {
         const result = this.bvh.raycast(ray);
         if (!result) return null;

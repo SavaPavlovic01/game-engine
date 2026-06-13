@@ -26,6 +26,10 @@ export abstract class Model implements Bounded {
 
     private _collider: Collider | null = null;
 
+    // script use this
+    // TODO: think about this, kinaa ugly that model cares about scripts
+    public userData: any = {};
+
     constructor(translate: Vec3, rotate: Quat, scale: Vec3, parts: ModelPart[]) {
         this.translation = translate;
         this.rotation = rotate;
@@ -70,6 +74,10 @@ export abstract class Model implements Bounded {
             this.modelMatrix.values[9]!,
             this.modelMatrix.values[10]!,
         ).normalize();
+    }
+
+    get ray() {
+        return new Ray(this.translation, this.forward);
     }
 
     get right() {
