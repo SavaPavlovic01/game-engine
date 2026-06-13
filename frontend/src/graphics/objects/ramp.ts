@@ -3,7 +3,7 @@ import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
-import { Mesh, meshLibrary, ModelPart } from '../mesh';
+import { Mesh, ModelPart, modelPartLibrary } from '../mesh';
 import { Model } from '../model';
 
 export class Ramp extends Model {
@@ -41,15 +41,15 @@ export class Ramp extends Model {
         14, 15, 16, 14, 16, 17,
     ]);
 
-    public static readonly mesh: Mesh = meshLibrary.get(this.rampVertices, this.indices);
-
     constructor(
         material: string,
         translate: Vec3 = new Vec3(0, 0, 0),
         rotate: Quat = Quat.identity(),
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
-        super(translate, rotate, scale, [new ModelPart(Ramp.rampVertices, Ramp.indices, material)]);
+        super(translate, rotate, scale, [
+            modelPartLibrary.get(Ramp.rampVertices, Ramp.indices, material),
+        ]);
     }
 
     public get center(): Vec3 {

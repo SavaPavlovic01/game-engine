@@ -12,22 +12,29 @@ export interface DrawCall {
 }
 
 export class ObjectRegistry {
-    private instanceBuffers: Map<ModelPart, InstanceBuffer> = new Map();
+    private instanceBuffers: Map<string, { buffer: InstanceBuffer; part: ModelPart }> = new Map();
 
     constructor(private driver: WebGPUDriver) {}
 
+    private getKey(part: ModelPart): string {
+        return `${part.id}:${part.materialId}`;
+    }
+
     public register(model: Model) {
         for (const part of model.parts) {
-            part.slot = this.getOrCreateBuffer(part).add(
-                this.driver,
-                model.getModelMatrix().toColumnMajor(),
+            model.slots.set(
+                part.id,
+                this.getOrCreateBuffer(part).add(
+                    this.driver,
+                    model.getModelMatrix().toColumnMajor(),
+                ),
             );
         }
     }
 
     public unregister(model: Model) {
         for (const part of model.parts) {
-            this.getOrCreateBuffer(part).remove(this.driver, part.slot!);
+            this.getOrCreateBuffer(part).remove(this.driver, model.slots.get(part.id)!);
         }
     }
 
@@ -35,7 +42,7 @@ export class ObjectRegistry {
         for (const part of model.parts) {
             this.getOrCreateBuffer(part).update(
                 this.driver,
-                part.slot!,
+                model.slots.get(part.id)!,
                 model.getModelMatrix().toColumnMajor(),
             );
         }
@@ -46,23 +53,21 @@ export class ObjectRegistry {
         materials?: MaterialLibrary,
     ): DrawCall[] {
         const drawCalls: DrawCall[] = [];
-
-        for (const [part, buffer] of this.instanceBuffers) {
+        for (const [_, { buffer, part }] of this.instanceBuffers) {
             const compacted = buffer.compact(this.driver, encoder, part.indices.length);
             drawCalls.push({ part, rawBuffer: buffer, ...compacted });
         }
-
         drawCalls.sort((a, b) => a.part.materialId.localeCompare(b.part.materialId));
-
         return drawCalls;
     }
 
     private getOrCreateBuffer(part: ModelPart): InstanceBuffer {
-        let buffer = this.instanceBuffers.get(part);
-        if (!buffer) {
-            buffer = new InstanceBuffer(this.driver, 10000);
-            this.instanceBuffers.set(part, buffer);
+        const key = this.getKey(part);
+        let entry = this.instanceBuffers.get(key);
+        if (!entry) {
+            entry = { buffer: new InstanceBuffer(this.driver, 10000), part };
+            this.instanceBuffers.set(key, entry);
         }
-        return buffer;
+        return entry.buffer;
     }
 }

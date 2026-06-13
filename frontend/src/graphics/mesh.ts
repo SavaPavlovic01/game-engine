@@ -48,33 +48,22 @@ export class ModelPart extends Mesh {
     }
 }
 
-export class MeshLibrary {
-    private meshes: Map<string, Mesh> = new Map();
+export class ModelPartLibrary {
+    private parts: Map<string, ModelPart> = new Map();
 
-    private hash(vertices: Float32Array, indices: Uint16Array): string {
+    private hash(vertices: Float32Array, indices: Uint16Array, materialId: string): string {
         const v = vertices;
         const i = indices;
-        return `v${v.length}:${v[0]},${v[1]},${v[v.length - 2]},${v[v.length - 1]}_i${i.length}:${i[0]},${i[1]},${i[i.length - 2]},${i[i.length - 1]}`;
+        return `v${v.length}:${v[0]},${v[1]},${v[v.length - 2]},${v[v.length - 1]}_i${i.length}:${i[0]},${i[1]},${i[i.length - 2]},${i[i.length - 1]}_m${materialId}`;
     }
 
-    public get(vertices: Float32Array, indices: Uint16Array): Mesh {
-        const key = this.hash(vertices, indices);
-        if (!this.meshes.has(key)) {
-            this.meshes.set(key, new Mesh(vertices, indices, STRIDE));
+    public get(vertices: Float32Array, indices: Uint16Array, materialId: string): ModelPart {
+        const key = this.hash(vertices, indices, materialId);
+        if (!this.parts.has(key)) {
+            this.parts.set(key, new ModelPart(vertices, indices, materialId));
         }
-        return this.meshes.get(key)!;
-    }
-
-    public getById(id: number): Mesh | undefined {
-        for (const mesh of this.meshes.values()) {
-            if (mesh.id === id) return mesh;
-        }
-        return undefined;
-    }
-
-    public clear(): void {
-        this.meshes.clear();
+        return this.parts.get(key)!;
     }
 }
 
-export const meshLibrary = new MeshLibrary();
+export const modelPartLibrary = new ModelPartLibrary();

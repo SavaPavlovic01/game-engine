@@ -68,6 +68,7 @@ window.onload = async () => {
         Quat.identity(),
         new Vec3(50, 1, 50),
     );
+
     game.gameState.addStaticModel(ramp);
     game.gameState.addStaticModel(wall);
     game.gameState.addStaticModel(floor);
@@ -80,6 +81,7 @@ window.onload = async () => {
     const moveCube = await fetchScriptFile('moveCubes.js');
     const shoot = await fetchScriptFile('playerShoot.js');
     const particle = await fetchScriptFile('particle.js');
+
     await game.scriptSystem.loadScript(testtset);
     await game.scriptSystem.loadScript(moveCube);
     await game.scriptSystem.loadScript(particle);

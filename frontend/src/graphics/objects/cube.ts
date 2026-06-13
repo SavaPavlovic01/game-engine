@@ -3,7 +3,7 @@ import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
-import { Mesh, meshLibrary, ModelPart } from '../mesh';
+import { Mesh, ModelPart, modelPartLibrary } from '../mesh';
 import { Model } from '../model';
 
 export class Cube extends Model {
@@ -49,8 +49,6 @@ export class Cube extends Model {
         20, 21, 22, 20, 22, 23,
     ]);
 
-    public static readonly mesh: Mesh = meshLibrary.get(this.cubeVertices, this.indices);
-
     constructor(
         materialId: string,
         translate: Vec3 = new Vec3(0, 0, 0),
@@ -58,7 +56,7 @@ export class Cube extends Model {
         scale: Vec3 = new Vec3(1, 1, 1),
     ) {
         super(translate, rotate, scale, [
-            new ModelPart(Cube.cubeVertices, Cube.indices, materialId),
+            modelPartLibrary.get(Cube.cubeVertices, Cube.indices, materialId),
         ]);
     }
 

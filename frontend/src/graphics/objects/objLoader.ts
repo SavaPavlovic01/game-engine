@@ -3,7 +3,7 @@ import type { AABB } from '../collision/ray';
 import type { Material } from '../materials/material';
 import { Quat } from '../math/quat';
 import { Vec3 } from '../math/vec';
-import { Mesh, meshLibrary, ModelPart } from '../mesh';
+import { Mesh, ModelPart } from '../mesh';
 import { Model } from '../model';
 
 interface FaceVertex {

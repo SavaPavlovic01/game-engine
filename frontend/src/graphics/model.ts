@@ -20,7 +20,7 @@ export abstract class Model implements Bounded {
     private uniformBuffer?: GPUBuffer;
     private bindGroup?: GPUBindGroup;
 
-    public slot?: number;
+    public slots: Map<number, number> = new Map();
 
     public parts: ModelPart[];
 
