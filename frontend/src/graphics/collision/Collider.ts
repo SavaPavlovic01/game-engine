@@ -15,6 +15,25 @@ export interface Collider {
     testTriangle(triangle: Triangle): CollisionHit | null;
     update(center: Vec3, orientation: Quat): void;
     getContactPoint(normal: Vec3): Vec3;
+    getDebugLines(): [Vec3, Vec3][]; // pairs of world-space line endpoints
+}
+
+function boxEdgesFromCorners(corners: Vec3[]): [Vec3, Vec3][] {
+    const EDGES: [number, number][] = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 5],
+        [5, 6],
+        [6, 7],
+        [7, 4],
+        [0, 4],
+        [1, 5],
+        [2, 6],
+        [3, 7],
+    ];
+    return EDGES.map(([a, b]) => [corners[a]!, corners[b]!]);
 }
 
 export class AABBCollider implements Collider {
@@ -61,6 +80,21 @@ export class AABBCollider implements Collider {
             this.center.Y - normal.Y * this.halfExtents.Y,
             this.center.Z - normal.Z * this.halfExtents.Z,
         );
+    }
+
+    public getDebugLines(): [Vec3, Vec3][] {
+        const { center: c, halfExtents: h } = this;
+        const corners = [
+            new Vec3(c.X - h.X, c.Y - h.Y, c.Z - h.Z),
+            new Vec3(c.X + h.X, c.Y - h.Y, c.Z - h.Z),
+            new Vec3(c.X + h.X, c.Y + h.Y, c.Z - h.Z),
+            new Vec3(c.X - h.X, c.Y + h.Y, c.Z - h.Z),
+            new Vec3(c.X - h.X, c.Y - h.Y, c.Z + h.Z),
+            new Vec3(c.X + h.X, c.Y - h.Y, c.Z + h.Z),
+            new Vec3(c.X + h.X, c.Y + h.Y, c.Z + h.Z),
+            new Vec3(c.X - h.X, c.Y + h.Y, c.Z + h.Z),
+        ];
+        return boxEdgesFromCorners(corners);
     }
 }
 const EPSILON = 1e-6;
@@ -142,13 +176,16 @@ export class OBBCollider implements Collider {
             }
         }
 
-        if (best.normal.dot(v0) > 0) {
+        const centroid = v0
+            .add(v1)
+            .add(v2)
+            .scale(1 / 3);
+        if (best.normal.dot(centroid) > 0) {
             best.normal = best.normal.negate();
         }
 
         return { normal: best.normal, penetration: best.pen };
     }
-
     private testAxis(
         axis: Vec3,
         v0: Vec3,
@@ -183,11 +220,28 @@ export class OBBCollider implements Collider {
     }
 
     public getContactPoint(normal: Vec3): Vec3 {
-        return new Vec3(
-            this.center.X - normal.X * this.halfExtents.X,
-            this.center.Y - normal.Y * this.halfExtents.Y,
-            this.center.Z - normal.Z * this.halfExtents.Z,
-        );
+        return this.center
+            .sub(this.axes[0].scale(Math.sign(this.axes[0].dot(normal)) * this.halfExtents.X))
+            .sub(this.axes[1].scale(Math.sign(this.axes[1].dot(normal)) * this.halfExtents.Y))
+            .sub(this.axes[2].scale(Math.sign(this.axes[2].dot(normal)) * this.halfExtents.Z));
+    }
+
+    public getDebugLines(): [Vec3, Vec3][] {
+        const ax = this.axes[0].scale(this.halfExtents.X);
+        const ay = this.axes[1].scale(this.halfExtents.Y);
+        const az = this.axes[2].scale(this.halfExtents.Z);
+        const c = this.center;
+        const corners = [
+            c.sub(ax).sub(ay).sub(az),
+            c.add(ax).sub(ay).sub(az),
+            c.add(ax).add(ay).sub(az),
+            c.sub(ax).add(ay).sub(az),
+            c.sub(ax).sub(ay).add(az),
+            c.add(ax).sub(ay).add(az),
+            c.add(ax).add(ay).add(az),
+            c.sub(ax).add(ay).add(az),
+        ];
+        return boxEdgesFromCorners(corners);
     }
 }
 
@@ -201,5 +255,9 @@ export class NullCollider implements Collider {
     public update(_center: Vec3, _orientation: Quat): void {}
     public getContactPoint(_normal: Vec3): Vec3 {
         return Vec3.zeros();
+    }
+
+    public getDebugLines(): [Vec3, Vec3][] {
+        return [];
     }
 }

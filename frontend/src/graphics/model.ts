@@ -139,11 +139,13 @@ export abstract class Model implements Bounded {
     public translate(dir: Vec3) {
         this.translation = this.translation.add(dir);
         this.modelMatrix = this.buildModelMatrix();
+        this.collider.update(this.center, this.rotation);
     }
 
     public setTranslate(trans: Vec3) {
         this.translation = trans;
         this.modelMatrix = this.buildModelMatrix();
+        this.collider.update(this.center, this.rotation);
     }
 
     public setRotate(rot: Quat) {

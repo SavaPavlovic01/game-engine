@@ -8,6 +8,8 @@ import { DirectionalShadowMap, type ShadowCaster } from './shadowMap';
 import type { Model } from './model';
 import type { Vec3 } from './math/vec';
 import { BindGroupLayoutBuilder, FRAG, VERT_FRAG, type WebGPUDriver } from './webGpuDriver';
+import type { ColliderDebugRenderer } from './collision/ColliderRenderer';
+import type { Collider } from './collision/Collider';
 
 export interface IRenderer {
     registerObject(model: Model): void;
@@ -35,7 +37,10 @@ export class Renderer implements IRenderer {
 
     private inited = false;
 
-    constructor(private driver: WebGPUDriver) {
+    constructor(
+        private driver: WebGPUDriver,
+        private debugRenderer?: ColliderDebugRenderer,
+    ) {
         this.lights = new LightManager(driver);
         this.objects = new ObjectRegistry(driver);
     }
@@ -199,6 +204,12 @@ export class Renderer implements IRenderer {
             pass.setVertexBuffer(1, drawBuffer);
             pass.drawIndexedIndirect(drawArgsBuffer, 0);
         }
+
+        this.debugRenderer?.render(
+            scene.models.map((m: Model) => m.collider),
+            pass,
+            vpRaw,
+        );
 
         pass.end();
         this.driver.device.queue.submit([encoder.finish()]);

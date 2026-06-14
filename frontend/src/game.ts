@@ -15,6 +15,7 @@ import { Quat } from './graphics/math/quat.js';
 import { ScriptSystem } from './scriptSystem.js';
 import { Cube } from './graphics/objects/cube.js';
 import { Ramp } from './graphics/objects/ramp.js';
+import { ColliderDebugRenderer } from './graphics/collision/ColliderRenderer.js';
 
 interface Player {
     model: Model;
@@ -61,7 +62,8 @@ export class Game {
         const game = new Game();
         game.canvas = document.getElementById('canvas') as HTMLCanvasElement;
         game.graphics = await Graphics.create(game.canvas);
-        game.renderer = new Renderer(game.graphics.driver);
+        const debug = new ColliderDebugRenderer(game.graphics.driver);
+        game.renderer = new Renderer(game.graphics.driver, debug);
         game.gameState = new GameState(game.renderer);
         game.lobbyChannel = await LobbyChannel.create(game);
         game.exposeTypes();

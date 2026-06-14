@@ -1,6 +1,5 @@
 import { Vec3 } from '../math/vec';
 import { StaticBVH } from '../collision/StaticBVH';
-import { aabbVsTriangleMTV } from '../collision/CharacterController';
 import type { Model } from '../model';
 import type {
     IPhysicsWorld,
@@ -14,6 +13,13 @@ import { RigidBody } from './rigidBody';
 import { Ray } from '../collision/ray';
 
 const GRAVITY = new Vec3(0, -9.81, 0);
+
+// How aggressively to correct penetration each frame (0.1–0.3 typical)
+const BAUMGARTE = 0.2;
+// Penetration depth to ignore — prevents jitter on resting contact
+const PENETRATION_SLOP = 0.001;
+// Velocity threshold below which we consider the body "at rest" on an axis
+const REST_VELOCITY_SLOP = 0.001;
 
 export class NaivePhysicsWorld implements IPhysicsWorld {
     private bodies: Map<symbol, RigidBody> = new Map();
@@ -67,7 +73,8 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
     }
 
     public applyTorque(handle: RigidBodyHandle, torque: Vec3): void {
-        this.get(handle).torqueAccum = this.get(handle).torqueAccum.add(torque);
+        const body = this.get(handle);
+        body.torqueAccum = body.torqueAccum.add(torque);
     }
 
     public step(dt: number): void {
@@ -81,41 +88,30 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
             if (body.velocity.magnitude() < 0.05) {
                 body.velocity = Vec3.zeros();
             }
-            if (body.angularVelocity.magnitude() < 0.5) {
+            if (body.angularVelocity.magnitude() < 0.05) {
                 body.angularVelocity = Vec3.zeros();
             }
         }
     }
 
     private resolveCollisions(body: RigidBody): void {
-        const aabb = body.model.aabb;
         const candidates = this.staticBVH.query(body.model.collider);
 
-        for (const candidate of candidates) {
-            const hit = aabbVsTriangleMTV(aabb, candidate.triangle);
+        for (const { hit } of candidates) {
             if (!hit) continue;
 
-            body.position = body.position.add(hit.normal.scale(hit.penetration));
+            const correction = Math.max(hit.penetration - PENETRATION_SLOP, 0) * BAUMGARTE;
+            body.position = body.position.add(hit.normal.scale(correction));
             body.model.setTranslate(body.position);
 
-            const aabbCenter = body.position;
-            const halfExtents = new Vec3(
-                (aabb.max.X - aabb.min.X) / 2,
-                (aabb.max.Y - aabb.min.Y) / 2,
-                (aabb.max.Z - aabb.min.Z) / 2,
-            );
-            const contactPoint = new Vec3(
-                aabbCenter.X - hit.normal.X * halfExtents.X,
-                aabbCenter.Y - hit.normal.Y * halfExtents.Y,
-                aabbCenter.Z - hit.normal.Z * halfExtents.Z,
-            );
+            body.model.collider.update(body.position, body.orientation);
 
+            const contactPoint = body.model.collider.getContactPoint(hit.normal);
             const r = contactPoint.sub(body.position);
-
             const velAtContact = body.velocity.add(body.angularVelocity.cross(r));
             const velAlongNormal = velAtContact.dot(hit.normal);
 
-            if (velAlongNormal > 0) continue;
+            if (velAlongNormal > REST_VELOCITY_SLOP) continue;
 
             const worldInvI = body.worldInertiaTensorInv();
             const rCrossN = r.cross(hit.normal);
@@ -128,6 +124,7 @@ export class NaivePhysicsWorld implements IPhysicsWorld {
             const combinedFriction = Math.sqrt(body.friction * this.staticSurfaceFriction);
             const tangent = velAtContact.sub(hit.normal.scale(velAlongNormal));
             const tangentLen = tangent.magnitude();
+
             if (tangentLen > 1e-6) {
                 const tangentDir = tangent.scale(1 / tangentLen);
                 const jt = -velAtContact.dot(tangentDir) / denom;

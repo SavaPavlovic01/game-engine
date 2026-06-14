@@ -91,16 +91,16 @@ window.onload = async () => {
     const shootScript = await game.scriptSystem.loadScript(shoot);
 
     game.scriptSystem.attach(testcube, moveScript);
-    game.scriptSystem.attach(testcube, spawnScript);
+    //game.scriptSystem.attach(testcube, spawnScript);
     game.scriptSystem.attach(testcube, shootScript);
 
     game.playerModel = testcube;
 
-    const movingCube = new Cube('wall', new Vec3(0, 10, 0));
+    const movingCube = new Cube('wall', new Vec3(0, 10, 0), new Quat(0, 0, 0, 1));
     game.gameState.addDynamicModel(movingCube, {
         mass: 10,
         restitution: 0.1,
-        friction: 0.6,
+        friction: 0.1,
         linearDamping: 0.1,
         angularDamping: 0.9,
     });

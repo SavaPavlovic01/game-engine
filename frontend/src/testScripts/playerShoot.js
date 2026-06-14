@@ -25,11 +25,9 @@ export default {
 
     update({ model, scene, input, dt, gameState, game}) {
 
-        if (input.isKeyDown('y')) {
+        if (input.isKeyPressed('y')) {
             const hits = scene.interceptor.hitAll(model.ray)
             if (hits === null) return
-            console.log(hits)
-            const script = game.scriptSystem.getScript("moveCubes")
             for(const hit of hits) {
                 if(hit.model == model) continue
                 game.scriptSystem.detachAll(hit.model)
